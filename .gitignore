@@ -1,9 +1,6 @@
-@'
-venv/
-.venv/
 __pycache__/
 *.pyc
-*.pyo
-.env
-*.sqlite3
-'@ | Out-File -Encoding UTF8 .gitignore
+database.db
+database.db.bkp
+.venv/
+*.db
