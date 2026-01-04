@@ -1,6 +1,4 @@
-__pycache__/
-*.pyc
-database.db
-database.db.bkp
 .venv/
+__pycache__/
 *.db
+.env

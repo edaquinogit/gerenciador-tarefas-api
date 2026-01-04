@@ -10,6 +10,13 @@ class Prioridade(str, Enum):
     MEDIA = "media"
     ALTA = "alta"
 
+class Usuario(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(index=True, unique=True)
+    email: str = Field(unique=True)
+    password_hash: str
+    is_active: bool = Field(default=True)
+
 class Tarefa(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     titulo: str
