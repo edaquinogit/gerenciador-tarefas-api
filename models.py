@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import Enum
 
 
+
 class Prioridade(str, Enum):
     BAIXA = "baixa"
     MEDIA = "media"
