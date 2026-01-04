@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, Field, create_engine
+from sqlmodel import SQLModel, Field, create_engine, Relationship
 from typing import Optional
 from datetime import datetime
 from enum import Enum
@@ -18,13 +18,12 @@ class Usuario(SQLModel, table=True):
     is_active: bool = Field(default=True)
 
 class Tarefa(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     titulo: str
-    concluida: bool = Field(default=False)
+    prioridade: str
+    concluido: bool = False
 
-    criado_em: datetime = Field(default_factory=datetime.now)
-
-    prioridade: Prioridade = Field(default=Prioridade.MEDIA)
+    usuario_id: int | None = Field(default=None, foreign_key="usuario.id")
 
 
 def crie_o_banco():

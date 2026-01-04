@@ -40,8 +40,13 @@ def obter_usuario_atual(
 def criar_tarefa(
     tarefa: Tarefa, 
     session: Session = Depends(get_session),
-    usuario_logado: Usuario = Depends(obter_usuario_atual) 
+    usuario_logado: Usuario = Depends(obter_usuario_atual)
+ 
 ):
+    
+    tarefa.usuario_id = usuario_logado.id
+
+
     session.add(tarefa)
     session.commit()
     session.refresh(tarefa)
@@ -55,7 +60,9 @@ def listar_tarefas(
     prioridade: Prioridade = None,
     usuario_logado: Usuario = Depends(obter_usuario_atual) 
 ):
-    statement = select(Tarefa)
+    statement = select(Tarefa).where(Tarefa.usuario_id == usuario_logado.id)
+    results = session.exec(statement)
+    tarefas = results.all()
     
     if concluida is not None:
         statement = statement.where(Tarefa.concluida == concluida)
@@ -74,9 +81,12 @@ def atualizar_tarefa(
     tarefa_id: int, 
     novo_titulo: str = None,
     session: Session = Depends(get_session),
-    usuario_logado: Usuario = Depends(obter_usuario_atual) # <--- Protegido!
+    usuario_logado: Usuario = Depends(obter_usuario_atual)
 ):
     tarefa_no_banco = session.get(Tarefa, tarefa_id)
+    statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == usuario_logado)
+    tarefa = session.exec(statement).fist()
+
 
     if not tarefa_no_banco:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
