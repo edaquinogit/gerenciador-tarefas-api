@@ -17,6 +17,8 @@ class Usuario(SQLModel, table=True):
     password_hash: str
     is_active: bool = Field(default=True)
 
+    tarefas: list["Tarefa"] = Relationship(back_populates="usuario") 
+
 class Tarefa(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     titulo: str
@@ -25,6 +27,7 @@ class Tarefa(SQLModel, table=True):
 
     usuario_id: int | None = Field(default=None, foreign_key="usuario.id")
 
+    usuario: Optional[Usuario] = Relationship(back_populates="tarefas")
 
 def crie_o_banco():
     from database import engine
