@@ -123,12 +123,10 @@ pip install -r requirements.txt
 
 
 5. Execute a API:
->>>>>>> 4a5aabb101815e767d700b839a683e8af78c98b1
 
 uvicorn main:app --reload
 
 
-<<<<<<< HEAD
 📌 Acessar a API
 
 Aplicação:
