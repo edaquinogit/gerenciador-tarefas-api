@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ﻿# 📋 Gerenciador de Tarefas – API REST
 
 API REST desenvolvida em **Python** com **FastAPI** e **SQLModel**, com foco em praticar conceitos de backend como CRUD, persistência em banco de dados, organização de projeto e boas práticas para APIs modernas.
@@ -221,4 +220,3 @@ LinkedIn: https://www.linkedin.com/in/ednaldo-aquino-6536892b5
 
 
 Desenvolvido como projeto de estudo e portfólio para primeira vaga de emprego Júnio/Estágio.
->>>>>>> 4a5aabb101815e767d700b839a683e8af78c98b1
