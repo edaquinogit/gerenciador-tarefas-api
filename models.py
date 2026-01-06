@@ -17,7 +17,10 @@ class Usuario(SQLModel, table=True):
     password_hash: str
     is_active: bool = Field(default=True)
 
-    tarefas: list["Tarefa"] = Relationship(back_populates="usuario") 
+    tarefas: list["Tarefa"] = Relationship(
+        back_populates="usuario",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 class Tarefa(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
