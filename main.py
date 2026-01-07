@@ -1,120 +1,145 @@
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from sqlmodel import select, SQLModel
+from datetime import timedelta
+from typing import List
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer 
-from sqlmodel import Session, select
-from models import Tarefa, Usuario
-from database import get_session, create_db_and_tabelas
-from security import verificar_senha, criar_token_acesso, SECRET_KEY, ALGORITHM
-from jose import JWTError, jwt
-from sqlalchemy import func
 
-# Configuração do esquema de segurança
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# Importações de configuração interna
+from database import get_session, engine
+from models import Usuario, Tarefa, UsuarioCreate, TarefaCreate, Token
+from security import (
+    get_current_user, authenticate_user, create_access_token, 
+    gerar_hash_senha, ACCESS_TOKEN_EXPIRE_MINUTES
+)
 
-# --- GERENCIAMENTO DE CICLO DE VIDA (LIFESPAN) ---
+# --- GERENCIADOR DE CICLO DE VIDA (LIFESPAN) ---
+# Substitui o @app.on_event("startup") que está depreciado
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Cria o banco e as tabelas ao iniciar
-    create_db_and_tabelas()
-    
-    # 2. Obtém a sessão do gerador manualmente para listar usuários
-    session_generator = get_session()
-    session = next(session_generator) # Extrai a sessão ativa
-    
-    try:
-        usuarios = session.exec(select(Usuario)).all()
-        print("\n" + "="*30)
-        print("USUÁRIOS CADASTRADOS:")
-        if not usuarios:
-            print("Nenhum usuário encontrado no banco.")
-        for u in usuarios:
-            print(f"- Usuário: {u.username}")
-        print("="*30 + "\n")
-    finally:
-        session.close() # Garante o fechamento da conexão
-    
-    yield  # O servidor fica rodando aqui
-    
-    print("Desligando o servidor...")
+    # Roda ao iniciar o servidor: Garante que as tabelas existam
+    import models 
+    SQLModel.metadata.create_all(engine)
+    yield
+    # Roda ao desligar o servidor (se necessário limpar algo)
 
-# Inicialização do App com o lifespan corrigido
-app = FastAPI(lifespan=lifespan)
-
-# --- DEPENDÊNCIA PARA OBTER USUÁRIO ATUAL ---
-def obter_usuario_atual(
-    token: str = Depends(oauth2_scheme),
-    session: Session = Depends(get_session)
-):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise HTTPException(status_code=401, detail="Token inválido")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Erro ao validar token")
-    
-    usuario = session.exec(select(Usuario).where(Usuario.username == username)).first()
-    if not usuario:
-        raise HTTPException(status_code=401, detail="Usuário não encontrado")
-    return usuario
+app = FastAPI(
+    title="Gerenciador de Tarefas API",
+    description="API robusta com SQLModel, FastAPI e Autenticação JWT",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 # --- ROTAS DE AUTENTICAÇÃO ---
-@app.post("/token")
-def login(
+
+@app.post("/token", response_model=Token, tags=["Segurança"])
+async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), 
     session: Session = Depends(get_session)
 ):
-    statement = select(Usuario).where(Usuario.username == form_data.username)
-    usuario = session.exec(statement).first()
-
-    if not usuario or not verificar_senha(form_data.password, usuario.password_hash):
+    user = authenticate_user(session, form_data.username, form_data.password)
+    if not user:
         raise HTTPException(
-            status_code=400, 
-            detail="Usuário ou senha incorretos"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Utilizador ou senha incorretos",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
-    token = criar_token_acesso(dados={"sub": usuario.username})
-    return {"access_token": token, "token_type": "bearer"}
-
-# --- CRUD DE TAREFAS ---
-@app.post("/tarefas")
-def criar_tarefa(
-    tarefa: Tarefa,
+# --- ROTA DE CADASTRO PROTEGIDA ---
+@app.post("/usuarios", status_code=status.HTTP_201_CREATED, tags=["Administração"])
+def criar_usuario(
+    usuario: UsuarioCreate, 
     session: Session = Depends(get_session),
-    usuario_logado: Usuario = Depends(obter_usuario_atual)
+    current_user: Usuario = Depends(get_current_user)
 ):
-    try:
-        tarefa.usuario_id = usuario_logado.id # Vincula ao dono
-        session.add(tarefa)
-        session.commit()
-        session.refresh(tarefa)
-        return tarefa
-    except Exception as e:
-        session.rollback()
+    # VERIFICAÇÃO DE PODER: Só o admin cria novos usuários
+    if not current_user.is_admin:
         raise HTTPException(
-            status_code=422,
-            detail="Erro ao criar tarefa. Verifique os dados."
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Apenas administradores podem cadastrar novos usuários."
         )
 
-@app.get("/tarefas")
+    # Verifica se já existe
+    statement = select(Usuario).where(Usuario.username == usuario.username)
+    if session.exec(statement).first():
+        raise HTTPException(status_code=400, detail="Utilizador já cadastrado")
+    
+    novo_usuario = Usuario(
+        username=usuario.username,
+        email=usuario.email,
+        password_hash=gerar_hash_senha(usuario.password),
+        is_active=True,
+        is_admin=False
+    )
+    session.add(novo_usuario)
+    session.commit()
+    return {"message": "Utilizador criado com sucesso pelo administrador"}
+
+# --- ROTAS DE TAREFAS ---
+
+@app.get("/tarefas", response_model=List[Tarefa], tags=["Tarefas"])
 def listar_tarefas(
     session: Session = Depends(get_session),
-    usuario_logado: Usuario = Depends(obter_usuario_atual)
+    current_user: Usuario = Depends(get_current_user)
 ):
-    statement = select(Tarefa).where(Tarefa.usuario_id == usuario_logado.id)
+    # Mostra apenas tarefas do dono logado
+    statement = select(Tarefa).where(Tarefa.usuario_id == current_user.id)
     return session.exec(statement).all()
 
-# --- ESTATÍSTICAS ---
-@app.get("/tarefas/estatisticas")
-def obter_estatisticas(
+@app.post("/tarefas", response_model=Tarefa, tags=["Tarefas"])
+def criar_tarefa(
+    tarefa_input: TarefaCreate, 
     session: Session = Depends(get_session),
-    usuario_logado: Usuario = Depends(obter_usuario_atual)
+    current_user: Usuario = Depends(get_current_user)
 ):
-    query_total = select(func.count(Tarefa.id)).where(Tarefa.usuario_id == usuario_logado.id)
-    total = session.exec(query_total).one()
-    
-    query_concluidas = select(func.count(Tarefa.id)).where(
-        Tarefa.usuario_id == usuario_logado.id,
-        Tarefa.concluido == True
+    nova_tarefa = Tarefa(
+        titulo=tarefa_input.titulo,
+        prioridade=tarefa_input.prioridade,
+        concluido=False,
+        usuario_id=current_user.id
     )
-    concluidas = session.exec
+    session.add(nova_tarefa)
+    session.commit()
+    session.refresh(nova_tarefa)
+    return nova_tarefa
+
+@app.patch("/tarefas/{tarefa_id}/concluir", tags=["Tarefas"])
+def concluir_tarefa(
+    tarefa_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Usuario = Depends(get_current_user)
+):
+    # Busca por ID e Usuário simultaneamente para segurança
+    statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
+    tarefa = session.exec(statement).first()
+    
+    if not tarefa:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    tarefa.concluido = True 
+    session.add(tarefa)
+    session.commit()
+    session.refresh(tarefa)
+    return {"message": "Tarefa concluída com sucesso"}
+
+@app.delete("/tarefas/{tarefa_id}", tags=["Tarefas"])
+def eliminar_tarefa(
+    tarefa_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Usuario = Depends(get_current_user)
+):
+    statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
+    tarefa = session.exec(statement).first()
+    
+    if not tarefa:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    session.delete(tarefa)
+    session.commit()
+    return {"message": "Tarefa eliminada"}
