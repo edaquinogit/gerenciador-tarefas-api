@@ -105,18 +105,30 @@ else:
             st.balloons()
             st.success("🏆 Tudo pronto por hoje!")
 
-    # NOVA TAREFA
-    with st.expander("➕ Adicionar Nova Tarefa"):
+    # NOVA TAREFA (Ajustado para atualizar a lista)
+    with st.expander("➕ Adicionar Nova Tarefa", expanded=False):
         with st.form("new_task", clear_on_submit=True):
-            titulo = st.text_input("Título da tarefa")
+            titulo = st.text_input("O que vamos realizar hoje?")
             prioridade = st.select_slider("Prioridade", options=["Baixa", "Média", "Alta"], value="Média")
-            if st.form_submit_button("Salvar Tarefa"):
+            
+            if st.form_submit_button("Agendar Tarefa"):
                 if titulo:
-                    headers = {"Authorization": f"Bearer {token}"}
-                    requests.post(f"{API_URL}/tarefas", json={"titulo": titulo, "prioridade": prioridade}, headers=headers)
-                    st.rerun()
-
-    st.divider()
+                    with st.spinner("Agendando..."):
+                        headers = {"Authorization": f"Bearer {token}"}
+                        payload = {"titulo": titulo, "prioridade": prioridade}
+                        
+                        # Fazemos a postagem
+                        res = requests.post(f"{API_URL}/tarefas", json=payload, headers=headers)
+                        
+                        if res.status_code == 200 or res.status_code == 201:
+                            st.toast("Tarefa agendada com sucesso!", icon="📅")
+                            time.sleep(1) # Essencial para o SQLite no Render processar
+                            st.rerun()    # Força a leitura atualizada da lista
+                        else:
+                            st.error(f"Erro ao salvar: {res.status_code}")
+                else:
+                    st.warning("Por favor, digite um título para a tarefa.")
+    
 
     # LISTAGEM ÚNICA (Corrigida e Interativa)
     if not tarefas:
