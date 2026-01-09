@@ -130,7 +130,7 @@ else:
                     st.warning("Por favor, digite um título para a tarefa.")
     
 
-    # LISTAGEM ÚNICA (Corrigida e Interativa)
+ # LISTAGEM ÚNICA (Corrigida e Interativa)
     if not tarefas:
         st.info("Nenhuma tarefa para exibir.")
     else:
@@ -144,24 +144,31 @@ else:
                 
                 with c1:
                     if is_done:
-                        st.markdown(f"✅ ~~{t_titulo}~~")
+                        # Estilo riscado para tarefas prontas
+                        st.markdown(f"✅ <span style='color: gray; text-decoration: line-through;'>{t_titulo}</span>", unsafe_allow_html=True)
                     else:
                         st.markdown(f"⏳ **{t_titulo}**")
                     st.caption(f"Prioridade: {t.get('prioridade', 'Média')}")
                 
                 with c2:
+                    # INTERATIVIDADE: Só mostra o botão se NÃO estiver concluída
                     if not is_done:
-                        if st.button("✔", key=f"done_{t_id}"):
-                            with st.spinner("Concluindo..."):
+                        if st.button("✔", key=f"done_{t_id}", help="Marcar como concluída"):
+                            with st.spinner(""): # Pequeno feedback visual de carregamento
                                 if TaskService.concluir(t_id, token):
-                                    st.toast(f"Feito: {t_titulo}")
-                                    time.sleep(0.5)
-                                    st.rerun()
+                                    st.toast(f"Concluído: {t_titulo}", icon="✅")
+                                    time.sleep(0.5) # Pausa para o usuário ver o toast
+                                    st.rerun() # Recarrega para o botão sumir e o texto riscar
                     else:
-                        st.write("⭐")
+                        # Se já está pronta, o botão DESAPARECE e mostra uma estrela ou check fixo
+                        st.write("🌟")
 
                 with c3:
-                    if st.button("🗑️", key=f"del_{t_id}"):
-                        if TaskService.deletar(t_id, token):
-                            st.rerun()
+                    # Botão de excluir sempre disponível
+                    if st.button("🗑️", key=f"del_{t_id}", help="Excluir permanentemente"):
+                        with st.spinner(""):
+                            if TaskService.deletar(t_id, token):
+                                st.toast("Removida", icon="🗑️")
+                                time.sleep(0.3)
+                                st.rerun()
                 st.divider()
