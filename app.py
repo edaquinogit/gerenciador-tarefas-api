@@ -107,6 +107,18 @@ else:
             st.session_state.clear()
             st.rerun()
 
+    # --- CORREÇÃO AQUI: Definir a variável ANTES de usar ---
+    tarefas = TaskService.listar(token) 
+    
+    
+    if tarefas is None:
+        tarefas = []
+
+   
+    if tarefas:
+        total = len(tarefas)
+        
+
     # --- REFINAMENTO: CÁLCULO DE PROGRESSO ---
     tarefas = TaskService.listar(token)
     
@@ -205,8 +217,8 @@ else:
                         with st.spinner("Atualizando..."):
                             if TaskService.concluir(t_id, token):
                                 st.toast(f"Boa! '{t_titulo}' finalizada!", icon="🎉")
-                                time.sleep(1) # Tempo para o usuário ver o feedback
-                                st.rerun() # Força a atualização da tela
+                                time.sleep(1) 
+                                st.rerun()
                 else:
                     st.markdown("⭐") # Ícone fixo para tarefas já feitas
             
