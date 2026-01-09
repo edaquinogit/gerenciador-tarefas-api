@@ -16,7 +16,7 @@ from security import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Garante a criação das tabelas ao iniciar
+    # Cria as tabelas automaticamente no Render ao iniciar
     SQLModel.metadata.create_all(engine)
     yield
 
@@ -25,6 +25,17 @@ app = FastAPI(
     description="API robusta com SQLModel, FastAPI e Autenticação JWT",
     version="2.0.0",
     lifespan=lifespan
+)
+
+from fastapi.middleware.cors import CORSMiddleware
+
+# Permite que o frontend (Streamlit) acesse a API sem bloqueios de segurança
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- ROTAS DE AUTENTICAÇÃO ---
@@ -47,20 +58,14 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-# --- ROTAS DE ADMINISTRAÇÃO ---
+# --- ROTAS DE USUÁRIOS (CADASTRO LIBERADO) ---
 
 @app.post("/usuarios", status_code=status.HTTP_201_CREATED, tags=["Administração"])
 def criar_usuario(
     usuario: UsuarioCreate, 
-    session: Session = Depends(get_session),
-    current_user: Usuario = Depends(get_current_user)
+    session: Session = Depends(get_session)
 ):
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Apenas administradores podem cadastrar novos usuários."
-        )
-
+    # Verifica se o usuário já existe
     statement = select(Usuario).where(Usuario.username == usuario.username)
     if session.exec(statement).first():
         raise HTTPException(status_code=400, detail="Utilizador já cadastrado")
@@ -70,20 +75,19 @@ def criar_usuario(
         email=usuario.email,
         password_hash=gerar_hash_senha(usuario.password),
         is_active=True,
-        is_admin=False
+        is_admin=False # O primeiro usuário criado será comum
     )
     session.add(novo_usuario)
     session.commit()
     return {"message": f"Utilizador {usuario.username} criado com sucesso!"}
 
-# --- ROTAS DE TAREFAS (VÍNCULO AUTOMÁTICO APLICADO) ---
+# --- ROTAS DE TAREFAS ---
 
 @app.get("/tarefas", response_model=List[Tarefa], tags=["Tarefas"])
 def listar_tarefas(
     session: Session = Depends(get_session),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # O Admin vê tudo, o Usuário Comum vê apenas as dele
     if current_user.is_admin:
         statement = select(Tarefa)
     else:
@@ -97,7 +101,6 @@ def criar_tarefa(
     session: Session = Depends(get_session),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # A mágica acontece aqui: usuario_id é preenchido pelo token
     nova_tarefa = Tarefa(
         **tarefa_input.model_dump(),
         concluido=False,
@@ -114,31 +117,4 @@ def concluir_tarefa(
     session: Session = Depends(get_session),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # Proteção: só altera se a tarefa for do usuário logado
     statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
-    tarefa = session.exec(statement).first()
-    
-    if not tarefa:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada ou acesso negado")
-    
-    tarefa.concluido = not tarefa.concluido # Alterna entre feito/não feito
-    session.add(tarefa)
-    session.commit()
-    session.refresh(tarefa)
-    return tarefa
-
-@app.delete("/tarefas/{tarefa_id}", tags=["Tarefas"])
-def eliminar_tarefa(
-    tarefa_id: int, 
-    session: Session = Depends(get_session),
-    current_user: Usuario = Depends(get_current_user)
-):
-    statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
-    tarefa = session.exec(statement).first()
-    
-    if not tarefa:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
-    
-    session.delete(tarefa)
-    session.commit()
-    return {"detail": "Tarefa eliminada com sucesso"}
