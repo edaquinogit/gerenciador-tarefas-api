@@ -178,3 +178,42 @@ else:
                             time.sleep(0.5)
                             st.rerun()
                 st.divider()
+# --- LISTAGEM DE TAREFAS ATUALIZADA ---
+if not tarefas:
+    st.write("✨ *Nenhuma tarefa por aqui. Que tal planejar seu dia?*")
+else:
+    for t in tarefas:
+        is_done = t.get("concluido", False)
+        t_id = t.get("id")
+        t_titulo = t.get("titulo", "Sem título")
+        
+        # Criamos um container visual para cada tarefa
+        with st.container():
+            c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
+            
+            with c1:
+                if is_done:
+                    st.markdown(f"✅ ~~{t_titulo}~~")
+                else:
+                    st.markdown(f"⏳ **{t_titulo}**")
+                st.caption(f"Prioridade: {t.get('prioridade', 'Média')}")
+            
+            with c2:
+                # Se não estiver pronta, mostra o botão de concluir
+                if not is_done:
+                    if st.button("✔", key=f"done_{t_id}", help="Clique para concluir"):
+                        with st.spinner("Atualizando..."):
+                            if TaskService.concluir(t_id, token):
+                                st.toast(f"Boa! '{t_titulo}' finalizada!", icon="🎉")
+                                time.sleep(1) # Tempo para o usuário ver o feedback
+                                st.rerun() # Força a atualização da tela
+                else:
+                    st.markdown("⭐") # Ícone fixo para tarefas já feitas
+            
+            with c3:
+                if st.button("🗑️", key=f"del_{t_id}", help="Excluir tarefa"):
+                    if TaskService.deletar(t_id, token):
+                        st.toast("Tarefa removida.")
+                        time.sleep(0.5)
+                        st.rerun()
+            st.divider()
