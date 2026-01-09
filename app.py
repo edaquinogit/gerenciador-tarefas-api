@@ -22,6 +22,9 @@ class TaskService:
         headers = {"Authorization": f"Bearer {token}"}
         try:
             response = requests.get(f"{API_URL}/tarefas", headers=headers)
+            if response.status_code == 401:
+                st.session_state.clear()
+                st.rerun()
             return response.json() if response.status_code == 200 else []
         except: return []
 
@@ -91,7 +94,7 @@ if "access_token" not in st.session_state:
                     res = requests.post(f"{API_URL}/usuarios", json=payload)
                     if res.status_code == 201:
                         st.success("Conta criada! Já pode fazer login.")
-                        del st.session_state.n1 # Reseta o captcha
+                        del st.session_state.n1 
                     else: st.error("Erro: Usuário já cadastrado.")
                 else: st.error("Soma incorreta!")
 
@@ -106,6 +109,24 @@ else:
             del st.session_state["access_token"]
             st.rerun()
 
+    # --- BLOCO DE PROGRESSO ---
+    tarefas = TaskService.listar(token)
+    
+    if tarefas:
+        total = len(tarefas)
+        concluidas = len([t for t in tarefas if t.get("concluido")])
+        percentual = concluidas / total
+        
+        st.subheader("📊 Seu Progresso")
+        col_p1, col_p2 = st.columns([4, 1])
+        with col_p1:
+            st.progress(percentual)
+        with col_p2:
+            st.write(f"**{int(percentual * 100)}%**")
+        
+        if percentual == 1:
+            st.success("🏆 Incrível! Todas as tarefas concluídas!")
+
     # Adicionar Tarefa
     with st.expander("➕ Nova Tarefa", expanded=False):
         with st.form("new_task", clear_on_submit=True):
@@ -119,15 +140,12 @@ else:
                     time.sleep(1)
                     st.rerun()
 
-    # Listagem Profissional
     st.divider()
-    tarefas = TaskService.listar(token)
     
     if not tarefas:
         st.write("✨ *Você não tem tarefas pendentes. Aproveite o descanso!*")
     else:
         for t in tarefas:
-            # Pegamos os dados com segurança usando .get()
             is_done = t.get("concluido", False)
             t_id = t.get("id")
             t_titulo = t.get("titulo", "Sem título")
@@ -143,19 +161,17 @@ else:
                     st.caption(f"Prioridade: {t.get('prioridade', 'Média')}")
                 
                 with col2:
-                    # O botão de concluir só aparece se a tarefa não estiver pronta
                     if not is_done:
                         if st.button("✔", key=f"done_{t_id}"):
                             if TaskService.concluir(t_id, token):
                                 st.balloons()
-                                st.success("🎊 EXCELENTE TRABALHO!")
-                                time.sleep(13)
+                                st.toast("Tarefa concluída!", icon="🎊")
+                                time.sleep(1.5) # Ajustado de 13s para 1.5s
                                 st.rerun()
                     else:
                         st.markdown("⭐")
                 
                 with col3:
-                    # LINHA CORRIGIDA: A lixeira agora tem uma chave única fechada corretamente
                     if st.button("🗑️", key=f"del_{t_id}"):
                         if TaskService.deletar(t_id, token):
                             st.toast("Tarefa removida.")

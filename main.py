@@ -6,7 +6,7 @@ from datetime import timedelta
 from typing import List
 from contextlib import asynccontextmanager
 
-# Importações de configuração interna
+# Importações internas
 from database import get_session, engine
 from models import Usuario, Tarefa, UsuarioCreate, TarefaCreate, Token
 from security import (
@@ -14,15 +14,11 @@ from security import (
     gerar_hash_senha, ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
-# --- GERENCIADOR DE CICLO DE VIDA (LIFESPAN) ---
-# Substitui o @app.on_event("startup") que está depreciado
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Roda ao iniciar o servidor: Garante que as tabelas existam
-    import models 
+    # Garante a criação das tabelas ao iniciar
     SQLModel.metadata.create_all(engine)
     yield
-    # Roda ao desligar o servidor (se necessário limpar algo)
 
 app = FastAPI(
     title="Gerenciador de Tarefas API",
@@ -51,21 +47,20 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-# --- ROTA DE CADASTRO PROTEGIDA ---
+# --- ROTAS DE ADMINISTRAÇÃO ---
+
 @app.post("/usuarios", status_code=status.HTTP_201_CREATED, tags=["Administração"])
 def criar_usuario(
     usuario: UsuarioCreate, 
     session: Session = Depends(get_session),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # VERIFICAÇÃO DE PODER: Só o admin cria novos usuários
     if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Apenas administradores podem cadastrar novos usuários."
         )
 
-    # Verifica se já existe
     statement = select(Usuario).where(Usuario.username == usuario.username)
     if session.exec(statement).first():
         raise HTTPException(status_code=400, detail="Utilizador já cadastrado")
@@ -79,17 +74,21 @@ def criar_usuario(
     )
     session.add(novo_usuario)
     session.commit()
-    return {"message": "Utilizador criado com sucesso pelo administrador"}
+    return {"message": f"Utilizador {usuario.username} criado com sucesso!"}
 
-# --- ROTAS DE TAREFAS ---
+# --- ROTAS DE TAREFAS (VÍNCULO AUTOMÁTICO APLICADO) ---
 
 @app.get("/tarefas", response_model=List[Tarefa], tags=["Tarefas"])
 def listar_tarefas(
     session: Session = Depends(get_session),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # Mostra apenas tarefas do dono logado
-    statement = select(Tarefa).where(Tarefa.usuario_id == current_user.id)
+    # O Admin vê tudo, o Usuário Comum vê apenas as dele
+    if current_user.is_admin:
+        statement = select(Tarefa)
+    else:
+        statement = select(Tarefa).where(Tarefa.usuario_id == current_user.id)
+        
     return session.exec(statement).all()
 
 @app.post("/tarefas", response_model=Tarefa, tags=["Tarefas"])
@@ -98,9 +97,9 @@ def criar_tarefa(
     session: Session = Depends(get_session),
     current_user: Usuario = Depends(get_current_user)
 ):
+    # A mágica acontece aqui: usuario_id é preenchido pelo token
     nova_tarefa = Tarefa(
-        titulo=tarefa_input.titulo,
-        prioridade=tarefa_input.prioridade,
+        **tarefa_input.model_dump(),
         concluido=False,
         usuario_id=current_user.id
     )
@@ -115,18 +114,18 @@ def concluir_tarefa(
     session: Session = Depends(get_session),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # Busca por ID e Usuário simultaneamente para segurança
+    # Proteção: só altera se a tarefa for do usuário logado
     statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
     tarefa = session.exec(statement).first()
     
     if not tarefa:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada ou acesso negado")
     
-    tarefa.concluido = True 
+    tarefa.concluido = not tarefa.concluido # Alterna entre feito/não feito
     session.add(tarefa)
     session.commit()
     session.refresh(tarefa)
-    return {"message": "Tarefa concluída com sucesso"}
+    return tarefa
 
 @app.delete("/tarefas/{tarefa_id}", tags=["Tarefas"])
 def eliminar_tarefa(
@@ -142,4 +141,4 @@ def eliminar_tarefa(
     
     session.delete(tarefa)
     session.commit()
-    return {"message": "Tarefa eliminada"}
+    return {"detail": "Tarefa eliminada com sucesso"}
