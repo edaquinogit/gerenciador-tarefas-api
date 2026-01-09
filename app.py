@@ -2,9 +2,14 @@ import streamlit as st
 import requests
 import time
 import random
+import os  
+from dotenv import load_dotenv 
 
-# Configuração de ambiente
-API_URL = "http://127.0.0.1:8000"
+# 1. Carrega as configurações do arquivo .env
+load_dotenv()
+
+# 2. Busca a URL da API. Se não encontrar no .env, usa o localhost por padrão
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 # --- SERVICE LAYER (Comunicação com a API) ---
 class TaskService:
@@ -46,23 +51,19 @@ class TaskService:
 # --- UI CONFIG ---
 st.set_page_config(page_title="Pro Task Manager", layout="centered", page_icon="🎯")
 
-# Custom CSS para melhorar a estética
 st.markdown("""
     <style>
     .main { background-color: #f5f7f9; }
     .stButton>button { width: 100%; border-radius: 5px; }
-    .task-card { padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🎯 Task Manager")
-st.caption("Organização inteligente para desenvolvedores de alto nível!")
-st.caption("Desenvolvedor: Ednaldo Aquino.")
+st.caption("Organização inteligente | Desenvolvedor: Ednaldo Aquino.")
 
 # --- AUTH LOGIC ---
 if "access_token" not in st.session_state:
     tab1, tab2 = st.tabs(["🔑 Acessar", "📝 Criar Conta"])
-
     with tab1:
         with st.form("login"):
             user = st.text_input("Usuário")
@@ -79,15 +80,12 @@ if "access_token" not in st.session_state:
     with tab2:
         if "n1" not in st.session_state:
             st.session_state.n1, st.session_state.n2 = random.randint(1,9), random.randint(1,9)
-        
         with st.form("register"):
             new_user = st.text_input("Username")
             new_email = st.text_input("Email")
             new_pw = st.text_input("Password", type="password")
-            
             st.write(f"🔢 Verificação: Quanto é **{st.session_state.n1} + {st.session_state.n2}**?")
             captcha = st.number_input("Resposta", min_value=0, step=1)
-            
             if st.form_submit_button("Finalizar Cadastro"):
                 if captcha == (st.session_state.n1 + st.session_state.n2):
                     payload = {"username": new_user, "email": new_email, "password": new_pw}
@@ -106,27 +104,31 @@ else:
         st.header("👤 Perfil")
         st.info("Logado com sucesso")
         if st.button("🚪 Encerrar Sessão"):
-            del st.session_state["access_token"]
+            st.session_state.clear()
             st.rerun()
 
-    # --- BLOCO DE PROGRESSO ---
+    # --- REFINAMENTO: CÁLCULO DE PROGRESSO ---
     tarefas = TaskService.listar(token)
     
     if tarefas:
         total = len(tarefas)
-        concluidas = len([t for t in tarefas if t.get("concluido")])
-        percentual = concluidas / total
+        num_concluidas = len([t for t in tarefas if t.get("concluido")])
+        percentual = num_concluidas / total if total > 0 else 0.0
         
-        st.subheader("📊 Seu Progresso")
-        col_p1, col_p2 = st.columns([4, 1])
-        with col_p1:
+        st.subheader("📊 Seu Desempenho")
+        col_bar, col_txt = st.columns([4, 1])
+        with col_bar:
             st.progress(percentual)
-        with col_p2:
+        with col_txt:
             st.write(f"**{int(percentual * 100)}%**")
         
-        if percentual == 1:
-            st.success("🏆 Incrível! Todas as tarefas concluídas!")
-
+        # Celebrações baseadas no progresso
+        if percentual == 1.0 and total > 0:
+            st.balloons()
+            st.success("🏆 **Incrível! Você concluiu todas as tarefas de hoje!**")
+        elif percentual >= 0.5:
+            st.info("⚡ **Boa! Você já passou da metade!**")
+    
     # Adicionar Tarefa
     with st.expander("➕ Nova Tarefa", expanded=False):
         with st.form("new_task", clear_on_submit=True):
@@ -137,13 +139,13 @@ else:
                     headers = {"Authorization": f"Bearer {token}"}
                     requests.post(f"{API_URL}/tarefas", json={"titulo": titulo, "prioridade": prioridade}, headers=headers)
                     st.toast("Tarefa agendada!", icon="📅")
-                    time.sleep(1)
+                    time.sleep(0.5)
                     st.rerun()
 
     st.divider()
     
     if not tarefas:
-        st.write("✨ *Você não tem tarefas pendentes. Aproveite o descanso!*")
+        st.write("✨ *Nenhuma tarefa por aqui. Que tal planejar seu dia?*")
     else:
         for t in tarefas:
             is_done = t.get("concluido", False)
@@ -151,30 +153,28 @@ else:
             t_titulo = t.get("titulo", "Sem título")
             
             with st.container():
-                col1, col2, col3 = st.columns([0.6, 0.2, 0.2])
-                
-                with col1:
+                c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
+                with c1:
                     if is_done:
                         st.markdown(f"✅ ~~{t_titulo}~~")
                     else:
                         st.markdown(f"⏳ **{t_titulo}**")
                     st.caption(f"Prioridade: {t.get('prioridade', 'Média')}")
                 
-                with col2:
+                with c2:
                     if not is_done:
                         if st.button("✔", key=f"done_{t_id}"):
                             if TaskService.concluir(t_id, token):
-                                st.balloons()
-                                st.toast("Tarefa concluída!", icon="🎊")
-                                time.sleep(1.5) # Ajustado de 13s para 1.5s
+                                st.toast("Tarefa concluída!")
+                                time.sleep(0.5)
                                 st.rerun()
                     else:
                         st.markdown("⭐")
                 
-                with col3:
+                with c3:
                     if st.button("🗑️", key=f"del_{t_id}"):
                         if TaskService.deletar(t_id, token):
                             st.toast("Tarefa removida.")
-                            time.sleep(1)
+                            time.sleep(0.5)
                             st.rerun()
                 st.divider()
