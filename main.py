@@ -6,7 +6,7 @@ from datetime import timedelta
 from typing import List
 from contextlib import asynccontextmanager
 
-# Importações internas
+# Importações internas (Garanta que esses arquivos existam no seu projeto)
 from database import get_session, engine
 from models import Usuario, Tarefa, UsuarioCreate, TarefaCreate, Token
 from security import (
@@ -14,28 +14,29 @@ from security import (
     gerar_hash_senha, ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
+# 1. Gerenciamento do ciclo de vida (Cria o banco ao iniciar)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Cria as tabelas automaticamente no Render ao iniciar
+    # Isso cria o arquivo .db e as tabelas dentro do servidor do Render
     SQLModel.metadata.create_all(engine)
     yield
 
 app = FastAPI(
     title="Gerenciador de Tarefas API",
-    description="API robusta com SQLModel, FastAPI e Autenticação JWT",
+    description="API com SQLModel e FastAPI",
     version="2.0.0",
     lifespan=lifespan
 )
 
+# 2. BLOCO DE CONEXÃO (CORS) - CRUCIAL PARA O STREAMLIT FUNCIONAR
 from fastapi.middleware.cors import CORSMiddleware
 
-# Permite que o frontend (Streamlit) acesse a API sem bloqueios de segurança
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Permite que o Streamlit acesse a API
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Permite POST, GET, DELETE, etc.
+    allow_headers=["*"],  # Permite o envio de Tokens
 )
 
 # --- ROTAS DE AUTENTICAÇÃO ---
@@ -49,7 +50,7 @@ async def login_for_access_token(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Utilizador ou senha incorretos",
+            detail="Usuário ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -58,28 +59,28 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-# --- ROTAS DE USUÁRIOS (CADASTRO LIBERADO) ---
+# --- ROTA DE CADASTRO (LIBERADA PARA O SITE) ---
 
 @app.post("/usuarios", status_code=status.HTTP_201_CREATED, tags=["Administração"])
 def criar_usuario(
     usuario: UsuarioCreate, 
     session: Session = Depends(get_session)
 ):
-    # Verifica se o usuário já existe
+    # Verifica se o nome de usuário já existe
     statement = select(Usuario).where(Usuario.username == usuario.username)
     if session.exec(statement).first():
-        raise HTTPException(status_code=400, detail="Utilizador já cadastrado")
+        raise HTTPException(status_code=400, detail="Usuário já cadastrado")
     
     novo_usuario = Usuario(
         username=usuario.username,
         email=usuario.email,
         password_hash=gerar_hash_senha(usuario.password),
         is_active=True,
-        is_admin=False # O primeiro usuário criado será comum
+        is_admin=False
     )
     session.add(novo_usuario)
     session.commit()
-    return {"message": f"Utilizador {usuario.username} criado com sucesso!"}
+    return {"message": f"Usuário {usuario.username} criado com sucesso!"}
 
 # --- ROTAS DE TAREFAS ---
 
@@ -118,3 +119,29 @@ def concluir_tarefa(
     current_user: Usuario = Depends(get_current_user)
 ):
     statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
+    tarefa = session.exec(statement).first()
+    
+    if not tarefa:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    tarefa.concluido = not tarefa.concluido
+    session.add(tarefa)
+    session.commit()
+    session.refresh(tarefa)
+    return tarefa
+
+@app.delete("/tarefas/{tarefa_id}", tags=["Tarefas"])
+def eliminar_tarefa(
+    tarefa_id: int, 
+    session: Session = Depends(get_session),
+    current_user: Usuario = Depends(get_current_user)
+):
+    statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
+    tarefa = session.exec(statement).first()
+    
+    if not tarefa:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    session.delete(tarefa)
+    session.commit()
+    return {"detail": "Tarefa eliminada com sucesso"}
