@@ -81,30 +81,84 @@ if "access_token" not in st.session_state:
 else:
     token = st.session_state["access_token"]
     
+    # 1. BUSCA DE DADOS (Sempre no topo para garantir sincronia)
+    tarefas = TaskService.listar(token)
+    if tarefas is None: 
+        tarefas = []
+
+    # 2. BARRA LATERAL
     with st.sidebar:
-        st.header(f"👤 {st.session_state.get('username', 'Perfil')}")
+        st.header(f"👤 {st.session_state.get('username', 'Usuário')}")
         if st.button("🚪 Encerrar Sessão"):
             st.session_state.clear()
             st.rerun()
 
-    # BUSCAR TAREFAS UMA ÚNICA VEZ
-    tarefas = TaskService.listar(token)
-    if tarefas is None: tarefas = []
-
     st.title("📝 Minhas Tarefas")
 
-    # PROGRESSO
+    # 3. CÁLCULO DE PROGRESSO E BALÕES
     if tarefas:
         total = len(tarefas)
-        num_concluidas = len([t for t in tarefas if t.get("concluido")])
+        concluidas = [t for t in tarefas if t.get("concluido")]
+        num_concluidas = len(concluidas)
         percentual = num_concluidas / total if total > 0 else 0.0
         
         st.write(f"**Progresso: {int(percentual * 100)}%** ({num_concluidas}/{total})")
         st.progress(percentual)
+        
+        # Só solta os balões se ACABOU de completar a última tarefa
         if percentual == 1.0 and total > 0:
             st.balloons()
-            st.success("🏆 Tudo pronto por hoje!")
+            st.success("🏆 Sensacional! Você completou tudo!")
 
+    # 4. ADICIONAR TAREFA
+    with st.expander("➕ Nova Tarefa"):
+        with st.form("new_task", clear_on_submit=True):
+            titulo = st.text_input("Título")
+            prioridade = st.select_slider("Prioridade", options=["Baixa", "Média", "Alta"], value="Média")
+            if st.form_submit_button("Agendar"):
+                if titulo:
+                    headers = {"Authorization": f"Bearer {token}"}
+                    res = requests.post(f"{API_URL}/tarefas", json={"titulo": titulo, "prioridade": prioridade}, headers=headers)
+                    if res.status_code in [200, 201]:
+                        st.rerun()
+
+    st.divider()
+
+    # 5. LISTAGEM DE TAREFAS (Lógica de desaparecimento do botão)
+    if not tarefas:
+        st.info("Nenhuma tarefa pendente.")
+    else:
+        for t in tarefas:
+            is_done = t.get("concluido", False)
+            t_id = t.get("id")
+            t_titulo = t.get("titulo", "Sem título")
+            
+            # Criamos uma chave única para cada tarefa no loop
+            with st.container():
+                c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
+                
+                with c1:
+                    if is_done:
+                        st.markdown(f"✅ <span style='color: gray; text-decoration: line-through;'>{t_titulo}</span>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"⏳ **{t_titulo}**")
+                
+                with c2:
+                    # Se NÃO está concluída, mostra o botão. Se está, o botão DESAPARECE.
+                    if not is_done:
+                        if st.button("✔", key=f"btn_done_{t_id}"):
+                            if TaskService.concluir(t_id, token):
+                                # O rerun garante que o loop recomece e 'is_done' seja True, escondendo este botão
+                                st.rerun()
+                    else:
+                        st.write("🌟")
+
+                with c3:
+                    if st.button("🗑️", key=f"btn_del_{t_id}"):
+                        if TaskService.deletar(t_id, token):
+                            st.rerun()
+                st.divider()
+                
     # NOVA TAREFA (Ajustado para atualizar a lista)
     with st.expander("➕ Adicionar Nova Tarefa", expanded=False):
         with st.form("new_task", clear_on_submit=True):
