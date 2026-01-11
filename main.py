@@ -1,147 +1,195 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from sqlmodel import select, SQLModel
+from fastapi.middleware.cors import CORSMiddleware
+
+from sqlmodel import SQLModel, select, Session
 from datetime import timedelta
 from typing import List
 from contextlib import asynccontextmanager
 
-# Importações internas (Garanta que esses arquivos existam no seu projeto)
-from database import get_session, engine
-from models import Usuario, Tarefa, UsuarioCreate, TarefaCreate, Token
-from security import (
-    get_current_user, authenticate_user, create_access_token, 
-    gerar_hash_senha, ACCESS_TOKEN_EXPIRE_MINUTES
+# =========================
+# BANCO DE DADOS
+# =========================
+from database.connection import get_session, engine
+from database.models import Usuario, Tarefa
+
+# =========================
+# SCHEMAS
+# =========================
+from schemas.usuario import UsuarioCreate, Token
+from schemas.tarefa import TarefaCreate
+
+# =========================
+# SEGURANÇA
+# =========================
+from core.security import (
+    get_current_user,
+    authenticate_user,
+    create_access_token,
+    get_password_hash,
 )
 
-# 1. Gerenciamento do ciclo de vida (Cria o banco ao iniciar)
+from core.config import settings
+
+
+# =========================
+# CICLO DE VIDA
+# =========================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Isso cria o arquivo .db e as tabelas dentro do servidor do Render
     SQLModel.metadata.create_all(engine)
     yield
 
+
 app = FastAPI(
     title="Gerenciador de Tarefas API",
-    description="API com SQLModel e FastAPI",
     version="2.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
-# 2. BLOCO DE CONEXÃO (CORS) - CRUCIAL PARA O STREAMLIT FUNCIONAR
-from fastapi.middleware.cors import CORSMiddleware
-
+# =========================
+# CORS
+# =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite que o Streamlit acesse a API
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Permite POST, GET, DELETE, etc.
-    allow_headers=["*"],  # Permite o envio de Tokens
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# --- ROTAS DE AUTENTICAÇÃO ---
-
-@app.post("/token", response_model=Token, tags=["Segurança"])
-async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), 
-    session: Session = Depends(get_session)
+# =========================
+# AUTH
+# =========================
+@app.post("/token", response_model=Token, tags=["Auth"])
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_session),
 ):
     user = authenticate_user(session, form_data.username, form_data.password)
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuário ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+
+    expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    token = create_access_token(
+        data={"sub": user.username},
+        expires_delta=expires,
     )
-    return {"access_token": access_token, "token_type": "bearer"}
 
-# --- ROTA DE CADASTRO (LIBERADA PARA O SITE) ---
+    return {"access_token": token, "token_type": "bearer"}
 
-@app.post("/usuarios", status_code=status.HTTP_201_CREATED, tags=["Administração"])
+
+# =========================
+# USUÁRIOS
+# =========================
+@app.post("/usuarios", status_code=status.HTTP_201_CREATED, tags=["Usuários"])
 def criar_usuario(
-    usuario: UsuarioCreate, 
-    session: Session = Depends(get_session)
+    usuario: UsuarioCreate,
+    session: Session = Depends(get_session),
 ):
-    # Verifica se o nome de usuário já existe
-    statement = select(Usuario).where(Usuario.username == usuario.username)
-    if session.exec(statement).first():
+    existe = session.exec(
+        select(Usuario).where(Usuario.username == usuario.username)
+    ).first()
+
+    if existe:
         raise HTTPException(status_code=400, detail="Usuário já cadastrado")
-    
-    novo_usuario = Usuario(
+
+    novo = Usuario(
         username=usuario.username,
         email=usuario.email,
-        password_hash=gerar_hash_senha(usuario.password),
+        password_hash=get_password_hash(usuario.password),
         is_active=True,
-        is_admin=False
+        is_admin=False,
     )
-    session.add(novo_usuario)
+
+    session.add(novo)
     session.commit()
-    return {"message": f"Usuário {usuario.username} criado com sucesso!"}
+    session.refresh(novo)
 
-# --- ROTAS DE TAREFAS ---
+    return {"message": "Usuário criado com sucesso"}
 
+
+# =========================
+# TAREFAS
+# =========================
 @app.get("/tarefas", response_model=List[Tarefa], tags=["Tarefas"])
 def listar_tarefas(
     session: Session = Depends(get_session),
-    current_user: Usuario = Depends(get_current_user)
+    user: Usuario = Depends(get_current_user),
 ):
-    if current_user.is_admin:
-        statement = select(Tarefa)
-    else:
-        statement = select(Tarefa).where(Tarefa.usuario_id == current_user.id)
-        
-    return session.exec(statement).all()
+    query = (
+        select(Tarefa)
+        if user.is_admin
+        else select(Tarefa).where(Tarefa.usuario_id == user.id)
+    )
+
+    return session.exec(query).all()
+
 
 @app.post("/tarefas", response_model=Tarefa, tags=["Tarefas"])
 def criar_tarefa(
-    tarefa_input: TarefaCreate, 
+    tarefa: TarefaCreate,
     session: Session = Depends(get_session),
-    current_user: Usuario = Depends(get_current_user)
+    user: Usuario = Depends(get_current_user),
 ):
-    nova_tarefa = Tarefa(
-        **tarefa_input.model_dump(),
-        concluido=False,
-        usuario_id=current_user.id
+    nova = Tarefa(
+        **tarefa.model_dump(),
+        usuario_id=user.id,
     )
-    session.add(nova_tarefa)
-    session.commit()
-    session.refresh(nova_tarefa)
-    return nova_tarefa
 
-@app.patch("/tarefas/{tarefa_id}/concluir", tags=["Tarefas"])
+    session.add(nova)
+    session.commit()
+    session.refresh(nova)
+
+    return nova
+
+
+@app.patch("/tarefas/{tarefa_id}/concluir", response_model=Tarefa, tags=["Tarefas"])
 def concluir_tarefa(
-    tarefa_id: int, 
+    tarefa_id: int,
     session: Session = Depends(get_session),
-    current_user: Usuario = Depends(get_current_user)
+    user: Usuario = Depends(get_current_user),
 ):
-    statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
-    tarefa = session.exec(statement).first()
-    
+    tarefa = session.exec(
+        select(Tarefa).where(
+            Tarefa.id == tarefa_id,
+            Tarefa.usuario_id == user.id,
+        )
+    ).first()
+
     if not tarefa:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
-    
+
     tarefa.concluido = not tarefa.concluido
-    session.add(tarefa)
     session.commit()
     session.refresh(tarefa)
+
     return tarefa
 
+
 @app.delete("/tarefas/{tarefa_id}", tags=["Tarefas"])
-def eliminar_tarefa(
-    tarefa_id: int, 
+def deletar_tarefa(
+    tarefa_id: int,
     session: Session = Depends(get_session),
-    current_user: Usuario = Depends(get_current_user)
+    user: Usuario = Depends(get_current_user),
 ):
-    statement = select(Tarefa).where(Tarefa.id == tarefa_id, Tarefa.usuario_id == current_user.id)
-    tarefa = session.exec(statement).first()
-    
+    tarefa = session.exec(
+        select(Tarefa).where(
+            Tarefa.id == tarefa_id,
+            Tarefa.usuario_id == user.id,
+        )
+    ).first()
+
     if not tarefa:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
-    
+
     session.delete(tarefa)
     session.commit()
-    return {"detail": "Tarefa eliminada com sucesso"}
+
+    return {"detail": "Tarefa removida com sucesso"}
