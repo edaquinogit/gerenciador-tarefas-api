@@ -8,8 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuração da URL da API
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
-
+API_URL = st.secrets.get("API_URL") or os.getenv("API_URL") or "https://gerenciador-tarefas-api-des-ednaldo.onrender.com"
 class TaskService:
     @staticmethod
     def login(username, password):
