@@ -1,94 +1,92 @@
-﻿# 🚀 Gerenciador de Tarefas API
+﻿# 🎯 Pro Task Manager - Full-Stack Application
 
-API RESTful desenvolvida com **FastAPI** e **SQLModel** para gerenciamento de tarefas, com autenticação JWT, CRUD completo e integração com frontend em **Streamlit**.
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.25+-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![SQLModel](https://img.shields.io/badge/SQLModel-Latest-black?style=flat)](https://sqlmodel.tiangolo.com/)
 
----
-
-## 📂 Estrutura do Projeto
-
-Gerenciador_API_V2/ ├── backend/ │   ├── core/              # segurança, autenticação, config │   ├── database/          # conexão e modelos SQLModel │   ├── schemas/           # entrada/saída de dados (Pydantic) │   ├── scripts/           # utilitários (criar admin, resetar DB) │   ├── services/          # lógica de negócio (tarefas, usuários) │   ├── test/              # testes automatizados │   ├── main.py            # ponto de entrada da API │   └── requirements.txt   # dependências do backend ├── frontend/ │   ├── app.py             # Streamlit app │   └── .streamlit/secrets.toml ├── README.md ├── LICENSE ├── .gitignore
-
+O **Pro Task Manager** é uma solução completa para gerenciamento de tarefas, desenvolvida para demonstrar a integração entre uma API robusta em **FastAPI** e um frontend interativo em **Streamlit**. O projeto foca em segurança, utilizando autenticação JWT e uma arquitetura organizada em camadas.
 
 ---
 
-## ⚙️ Tecnologias Utilizadas
+## 🚀 Funcionalidades
 
-- Python 3.11+
-- FastAPI
-- SQLModel
-- SQLite (local)
-- Streamlit
-- Pytest
-- JWT (autenticação)
+- **Sistema de Autenticação:** Registro de novos usuários e login seguro com JWT (JSON Web Tokens).
+- **CRUD de Tarefas:** Criação, listagem, conclusão (check) e exclusão de tarefas.
+- **Painel de Progresso:** Visualização dinâmica do percentual de conclusão das tarefas com efeitos visuais (balloons).
+- **Priorização:** Classificação de tarefas por níveis de urgência (Baixa, Média, Alta).
+- **Validação de Cadastro:** Implementação de Captcha matemático para evitar bots no registro.
 
 ---
 
-## 🚀 Como Executar Localmente
+## 🛠️ Tecnologias Utilizadas
 
-### Backend
+### **Backend**
+- **FastAPI:** Framework web de alta performance.
+- **SQLModel (SQLAlchemy + Pydantic):** Para interação simplificada com o banco de dados.
+- **SQLite:** Banco de dados relacional leve e eficiente.
+- **Passlib & Bcrypt:** Para hashing seguro de senhas.
+- **PyJWT:** Geração e validação de tokens de acesso.
 
-```bash
-cd backend
+### **Frontend**
+- **Streamlit:** Framework para criação de interfaces web rápidas e intuitivas.
+- **Requests:** Para comunicação assíncrona com a API.
+- **Python Dotenv:** Gerenciamento de variáveis de ambiente.
+
+---
+
+## 🏗️ Arquitetura do Projeto
+
+O projeto segue uma estrutura de separação de responsabilidades para facilitar a manutenção e evolução:
+
+```text
+📂 Gerenciador_API_V2
+├── 📂 backend           # API, Modelos e Lógica de Negócio
+│   ├── 📂 models       # SQLModel Tables e Schemas
+│   ├── 📂 auth         # Lógica de JWT e Criptografia
+│   └── main.py         # Entrypoint do Servidor Uvicorn
+├── 📂 frontend          # Interface do Usuário
+│   └── app.py          # Aplicação Streamlit e Service Layer
+└── database.db         # Banco de Dados SQLite (gerado automaticamente)
+
+🔧 Como Executar
+
+1. Clonar o repositório
+
+git clone
+ [https://github.com/edaquinogit](https://github.com/edaquinogit/gerenciador-tarefas-api)
+
+cd SEU_REPOSITORIO
+
+Configurar o ambiente
+
 python -m venv .venv
-source .venv/bin/activate   # Linux/Mac
-.venv\Scripts\activate      # Windows
+
+source .venv/bin/activate  # Linux/Mac
+.venv\Scripts\activate     # Windows
+
 pip install -r requirements.txt
-uvicorn main:app --reload
 
-Acesse: http://localhost:8000/docs
-
-Frontend
-
-cd frontend
-streamlit run app.py
+3. Rodar o Backend
 
 
-Acesse: http://localhost:8501
+$env:PYTHONPATH = "."
 
+python -m uvicorn backend.main:app --reload
 
-🔐 Autenticação
+4. Rodar o Frontend
 
-- Login via JWT Token
-- Rotas protegidas com Depends(get_current_user)
-- Exemplo de login:
-POST /login
-{
-  "username": "admin",
-  "password": "123456"
-}
+streamlit run frontend/app.py
 
-🧪 Testes
+📈 Próximas Evoluções (Roadmap)
+[ ] Implementar filtros de tarefas por prioridade e status.
 
-cd backend
-pytest
+[ ] Adicionar campo de data limite (deadline) com notificações.
 
-🌐 Deploy
-- Backend: Render / Railway
-- Frontend: Streamlit Cloud
-- Variáveis de ambiente necessárias:
-- DATABASE_URL
-- SECRET_KEY
-- API_BASE_URL
+[ ] Realizar deploy automatizado no Render (Backend) e Streamlit Cloud (Frontend).
 
-📌 Funcionalidades
-- [x] Criar tarefa
-- [x] Listar tarefas
-- [x] Atualizar tarefa
-- [x] Deletar tarefa
-- [x] Autenticação de usuário
-- [ ] Deploy público
-- [ ] Dashboard com Streamlit
+[ ] Implementar testes unitários com Pytest.
 
-📬 Contato
-Desenvolvido por Ednaldo Aquino
-- LinkedIn 
-(www.linkedin.com/in/ednaldo-aquino-6536892b5)
-
-- GitHub 
-(https://github.com/edaquinogit)
-
----
-
-
-
-
+✒️ Autor
+Ednaldo - Desenvolvedor em evolução -
+www.linkedin.com/in/ednaldo-aquino-6536892b5
