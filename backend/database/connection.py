@@ -1,6 +1,10 @@
 from sqlmodel import SQLModel, create_engine, Session
 import os
 
+# Importamos os modelos para que o SQLModel "saiba" que as tabelas existem
+# antes de tentar criá-las
+from schemas.models import Usuario, Tarefa 
+
 # -------------------------
 # URL do banco
 # -------------------------

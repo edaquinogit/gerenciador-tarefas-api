@@ -9,8 +9,7 @@ from sqlmodel import Session, select
 
 from core.config import settings
 from database.connection import get_session
-from database.models import Usuario
-
+from schemas.models import Usuario
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 

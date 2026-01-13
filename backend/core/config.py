@@ -1,5 +1,4 @@
-from pydantic_settings import BaseSettings
-
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Projeto
@@ -13,8 +12,11 @@ class Settings(BaseSettings):
     # Banco de dados
     DATABASE_URL: str = "sqlite:///database.db"
 
-    class Config:
-        env_file = ".env"
+    # API (opcional, se você usa no frontend/deploy)
+    API_URL: str | None = None
+
+    # Configuração do Pydantic v2
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 # 👉 objeto global que será importado

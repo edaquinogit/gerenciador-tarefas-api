@@ -10,11 +10,8 @@ from dotenv import load_dotenv
 # =====================
 load_dotenv()
 
-API_URL = (
-    st.secrets.get("API_URL")
-    if hasattr(st, "secrets")
-    else None
-) or os.getenv("API_URL") or "http://127.0.0.1:8000"
+# Priorizamos o Localhost para desenvolvimento
+API_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(
     page_title="Pro Task Manager",
@@ -92,14 +89,12 @@ class TaskService:
 # =====================
 if "access_token" not in st.session_state:
     st.title("🎯 Task Manager")
-
     tab_login, tab_register = st.tabs(["🔑 Entrar", "📝 Criar Conta"])
 
     with tab_login:
         with st.form("login"):
             username = st.text_input("Usuário")
             password = st.text_input("Senha", type="password")
-
             if st.form_submit_button("Entrar"):
                 res = TaskService.login(username, password)
                 if res:
@@ -111,18 +106,13 @@ if "access_token" not in st.session_state:
 
     with tab_register:
         if "captcha" not in st.session_state:
-            st.session_state.captcha = (
-                random.randint(1, 9),
-                random.randint(1, 9),
-            )
-
+            st.session_state.captcha = (random.randint(1, 9), random.randint(1, 9))
         n1, n2 = st.session_state.captcha
 
         with st.form("register"):
             new_user = st.text_input("Usuário")
             email = st.text_input("Email")
-            password = st.text_input("Senha", type="password")
-
+            new_password = st.text_input("Senha", type="password")
             st.write(f"🔢 Quanto é {n1} + {n2}?")
             answer = st.number_input("Resposta", step=1)
 
@@ -130,26 +120,29 @@ if "access_token" not in st.session_state:
                 if answer != n1 + n2:
                     st.error("Verificação incorreta.")
                 else:
-                    res = requests.post(
-                        f"{API_URL}/usuarios",
-                        json={
-                            "username": new_user,
-                            "email": email,
-                            "password": password,
-                        },
-                    )
-                    if res.status_code == 201:
-                        st.success("Conta criada! Faça login.")
-                        del st.session_state.captcha
-                    else:
-                        st.error("Erro ao criar conta.")
+                    try:
+                        res = requests.post(
+                            f"{API_URL}/usuarios",
+                            json={"username": new_user, "email": email, "password": new_password},
+                            timeout=10
+                        )
+                        if res.status_code == 201:
+                            st.success("✅ Conta criada! Faça login na outra aba.")
+                            del st.session_state.captcha
+                        else:
+                            try:
+                                erro_detalhe = res.json().get('detail', 'Erro desconhecido')
+                                st.error(f"❌ Erro da API: {erro_detalhe}")
+                            except:
+                                st.error(f"❌ Status do Erro: {res.status_code}")
+                    except requests.exceptions.ConnectionError:
+                        st.error("🚨 Backend desligado! Ligue o terminal do Uvicorn.")
 
 # =====================
 # DASHBOARD
 # =====================
 else:
     token = st.session_state.access_token
-
     tarefas = TaskService.listar(token)
 
     with st.sidebar:
@@ -160,66 +153,39 @@ else:
 
     st.title("📝 Minhas Tarefas")
 
-    # PROGRESSO
     if tarefas:
         total = len(tarefas)
         concluidas = sum(1 for t in tarefas if t["concluido"])
-        progresso = concluidas / total
-        st.progress(progresso)
+        st.progress(concluidas / total)
         st.caption(f"{concluidas}/{total} concluídas")
-
-        if progresso == 1:
+        if concluidas == total:
             st.balloons()
-            st.success("🏆 Todas concluídas!")
 
-    # NOVA TAREFA
     with st.expander("➕ Nova Tarefa"):
         with st.form("nova_tarefa", clear_on_submit=True):
             titulo = st.text_input("Título")
-            prioridade = st.select_slider(
-                "Prioridade", ["Baixa", "Média", "Alta"], value="Média"
-            )
-
+            prioridade = st.select_slider("Prioridade", ["Baixa", "Média", "Alta"], value="Média")
             if st.form_submit_button("Adicionar"):
-                if titulo:
-                    if TaskService.criar(titulo, prioridade, token):
-                        st.toast("Tarefa criada!", icon="📌")
-                        time.sleep(0.5)
-                        st.rerun()
-                else:
-                    st.warning("Digite um título.")
+                if titulo and TaskService.criar(titulo, prioridade, token):
+                    st.toast("Tarefa criada!")
+                    time.sleep(0.5)
+                    st.rerun()
 
     st.divider()
 
-    # LISTAGEM
     if not tarefas:
         st.info("Nenhuma tarefa cadastrada.")
     else:
         for t in tarefas:
-            with st.container():
-                c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
-
-                with c1:
-                    if t["concluido"]:
-                        st.markdown(
-                            f"✅ <s>{t['titulo']}</s>",
-                            unsafe_allow_html=True,
-                        )
-                    else:
-                        st.markdown(f"⏳ **{t['titulo']}**")
-                    st.caption(f"Prioridade: {t.get('prioridade', 'Média')}")
-
-                with c2:
-                    if not t["concluido"]:
-                        if st.button("✔", key=f"done_{t['id']}"):
-                            if TaskService.concluir(t["id"], token):
-                                st.rerun()
-                    else:
-                        st.write("🌟")
-
-                with c3:
-                    if st.button("🗑️", key=f"del_{t['id']}"):
-                        if TaskService.deletar(t["id"], token):
-                            st.rerun()
-
-                st.divider()
+            c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
+            with c1:
+                label = f"✅ ~~{t['titulo']}~~" if t['concluido'] else f"⏳ **{t['titulo']}**"
+                st.markdown(label, unsafe_allow_html=True)
+                st.caption(f"Prioridade: {t.get('prioridade', 'Média')}")
+            with c2:
+                if not t["concluido"] and st.button("✔", key=f"done_{t['id']}"):
+                    if TaskService.concluir(t["id"], token): st.rerun()
+            with c3:
+                if st.button("🗑️", key=f"del_{t['id']}"):
+                    if TaskService.deletar(t["id"], token): st.rerun()
+            st.divider()
