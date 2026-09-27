@@ -1,97 +1,76 @@
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime, timedelta, timezone
 
-from jose import jwt, JWTError
-from fastapi import Depends, HTTPException, status
+import bcrypt
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
+from jose import JWTError, jwt
 from sqlmodel import Session, select
 
-from core.config import settings
-from database.connection import get_session
-from schemas.models import Usuario
+from backend.core.config import Settings
+from backend.database.connection import get_session
+from backend.models import Usuario
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-# 🔐 Hash de senha
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    if len(password.encode("utf-8")) > 72:
+        raise ValueError("Senha excede o limite de 72 bytes")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(password: str, hashed_password: str) -> bool:
+    if len(password.encode("utf-8")) > 72:
+        return False
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
 
 
-# 👤 Autenticação
-def authenticate_user(
-    session: Session,
-    username: str,
-    password: str
-) -> Optional[Usuario]:
-    statement = select(Usuario).where(Usuario.username == username)
-    user = session.exec(statement).first()
-
-    if not user:
-        return None
-    if not verify_password(password, user.password_hash):
-        return None
-
-    return user
+DUMMY_HASH = get_password_hash("dummy-password-never-used")
 
 
-# 🔑 Criar token JWT
-def create_access_token(
-    data: dict,
-    expires_delta: Optional[timedelta] = None
-):
-    to_encode = data.copy()
+def authenticate_user(session: Session, username: str, password: str) -> Usuario | None:
+    user = session.exec(select(Usuario).where(Usuario.username == username)).first()
+    valid = verify_password(password, user.password_hash if user else DUMMY_HASH)
+    return user if user and user.is_active and valid else None
 
-    expire = datetime.utcnow() + (
-        expires_delta
-        if expires_delta
-        else timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
 
-    to_encode.update({"exp": expire})
-
-    encoded_jwt = jwt.encode(
-        to_encode,
+def create_access_token(username: str, settings: Settings) -> str:
+    return jwt.encode(
+        {
+            "sub": username,
+            "exp": datetime.now(timezone.utc)
+            + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        },
         settings.SECRET_KEY,
-        algorithm=settings.ALGORITHM
+        algorithm=settings.ALGORITHM,
     )
-    return encoded_jwt
 
 
-# 👮 Usuário logado
 def get_current_user(
+    request: Request,
     token: str = Depends(oauth2_scheme),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ) -> Usuario:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Não foi possível validar as credenciais",
-        headers={"WWW-Authenticate": "Bearer"},
+    error = HTTPException(
+        401, "Credenciais inválidas ou expiradas", headers={"WWW-Authenticate": "Bearer"}
     )
-
+    settings = request.app.state.settings
     try:
         payload = jwt.decode(
             token,
             settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.ALGORITHM],
+            options={"require_exp": True, "require_sub": True},
         )
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
+        username = payload["sub"]
+        if not isinstance(username, str) or not username:
+            raise error
     except JWTError:
-        raise credentials_exception
-
-    statement = select(Usuario).where(Usuario.username == username)
-    user = session.exec(statement).first()
-
-    if user is None:
-        raise credentials_exception
-
+        raise error from None
+    user = session.exec(select(Usuario).where(Usuario.username == username)).first()
+    if not user or not user.is_active:
+        raise error
     return user

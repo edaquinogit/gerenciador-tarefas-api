@@ -1,17 +1,18 @@
-from typing import Optional
-from sqlmodel import SQLModel, Field, Relationship
+from typing import Literal
 
-class Tarefa(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class TarefaCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    titulo: str = Field(min_length=1, max_length=200)
+    prioridade: Literal["Baixa", "Média", "Alta"] = "Média"
+
+
+class TarefaRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
     titulo: str
     prioridade: str
-
-    usuario_id: int = Field(
-        foreign_key="usuario.id",
-        nullable=False,
-        sa_column_kwargs={"ondelete": "CASCADE"}
-    )
-
-    usuario: "Usuario" = Relationship(back_populates="tarefas")
-
-from .usuario import Usuario
+    concluido: bool
+    usuario_id: int
