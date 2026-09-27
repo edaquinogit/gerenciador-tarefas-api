@@ -38,7 +38,7 @@ def test_login_screen():
 
 
 def test_ui_outage_does_not_show_empty_success(monkeypatch):
-    monkeypatch.setattr(TaskService, "listar", Mock(side_effect=APIError("API indisponível")))
+    monkeypatch.setattr(TaskService, "me", Mock(side_effect=APIError("API indisponível")))
     app = AppTest.from_file("frontend/app.py")
     app.session_state.access_token = "token"
     app.session_state.username = "teste"
@@ -49,7 +49,7 @@ def test_ui_outage_does_not_show_empty_success(monkeypatch):
 
 
 def test_ui_expired_session_returns_to_login(monkeypatch):
-    monkeypatch.setattr(TaskService, "listar", Mock(side_effect=APIError("Expirou", 401)))
+    monkeypatch.setattr(TaskService, "me", Mock(side_effect=APIError("Expirou", 401)))
     app = AppTest.from_file("frontend/app.py")
     app.session_state.access_token = "token"
     app.session_state.username = "teste"

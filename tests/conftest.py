@@ -40,3 +40,23 @@ def user_factory(client):
         return {"Authorization": f"Bearer {token}"}
 
     return create
+
+
+@pytest.fixture
+def admin_headers(client):
+    from sqlmodel import Session
+
+    from backend.schemas.usuario import UsuarioCreate
+    from backend.services.usuarios import criar_primeiro_admin
+
+    with Session(client.app.state.engine) as session:
+        criar_primeiro_admin(
+            session,
+            UsuarioCreate(
+                username="patrao", email="patrao@example.com", password="senha-admin-123"
+            ),
+        )
+    token = client.post(
+        "/token", data={"username": "patrao", "password": "senha-admin-123"}
+    ).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}

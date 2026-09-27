@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api import auth, tarefas
+from backend.api import auth, tarefas, usuarios
 from backend.core.config import Settings, get_settings
 from backend.database.connection import build_engine
 
@@ -19,7 +19,7 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
         if owned_engine:
             engine.dispose()
 
-    app = FastAPI(title=settings.PROJECT_NAME, version="2.1.0", lifespan=lifespan)
+    app = FastAPI(title=settings.PROJECT_NAME, version="2.2.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.engine = engine
     if settings.CORS_ORIGINS:
@@ -30,6 +30,7 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
             allow_headers=["Authorization", "Content-Type"],
         )
     app.include_router(auth.router)
+    app.include_router(usuarios.router)
     app.include_router(tarefas.router)
 
     @app.get("/health", tags=["Sistema"])

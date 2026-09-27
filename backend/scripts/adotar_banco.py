@@ -5,11 +5,10 @@ from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from sqlalchemy import inspect, text
-from sqlmodel import SQLModel
 
 from backend.core.config import get_settings
 from backend.database.connection import build_engine
-from backend.models import Tarefa, Usuario  # noqa: F401
+from backend.database.legacy import metadata
 
 
 def main():
@@ -21,7 +20,7 @@ def main():
                 raise SystemExit(
                     "Adoção recusada: esperado banco legado com somente usuario e tarefa, sem alembic_version."
                 )
-            if compare_metadata(MigrationContext.configure(connection), SQLModel.metadata):
+            if compare_metadata(MigrationContext.configure(connection), metadata):
                 raise SystemExit(
                     "Adoção recusada: schema diferente da baseline. Revise uma cópia do banco."
                 )

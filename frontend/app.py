@@ -4,6 +4,8 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from frontend.services.task_service import APIError, TaskService
+from frontend.views.admin import render_admin
+from frontend.views.conta import render_conta
 
 load_dotenv()
 service = TaskService(os.getenv("API_URL", "http://127.0.0.1:8000"))
@@ -37,13 +39,42 @@ if not st.session_state.get("access_token"):
     st.caption("Para criar uma conta, solicite acesso ao responsável pelo sistema.")
     st.stop()
 
+token = st.session_state.access_token
+try:
+    user = service.me(token)
+except APIError as error:
+    report_error(error)
+    if st.button("Tentar novamente"):
+        st.rerun()
+    st.stop()
+
 with st.sidebar:
-    st.write(f"Usuário: {st.session_state.username}")
+    st.write(f"Usuário: {user['username']}")
+    st.caption("Administrador" if user["perfil"] == "ADMIN" else "Funcionário")
+    nomes = {
+        "SOLICITACAO": "Solicitação",
+        "PRODUCAO": "Produção",
+        "COLETA_EMBALAGEM": "Coleta e embalagem",
+    }
+    if user["perfil"] == "FUNCIONARIO":
+        st.caption(f"Setor: {nomes.get(user['setor'], 'Aguardando definição')}")
+    options = ["Minhas tarefas", "Minha conta"]
+    if user["perfil"] == "ADMIN":
+        options.insert(0, "Funcionários e setores")
+    page = st.radio("Menu", options)
     if st.button("Sair"):
         st.session_state.clear()
         st.rerun()
 
-token = st.session_state.access_token
+if page == "Funcionários e setores":
+    render_admin(service, token, report_error)
+    st.stop()
+if page == "Minha conta":
+    render_conta(service, token, user, report_error)
+    st.stop()
+if user["perfil"] == "FUNCIONARIO" and not user["setor"]:
+    st.warning("Seu setor ainda não foi definido. Solicite a classificação ao administrador.")
+
 st.title("Minhas tarefas")
 try:
     tarefas = service.listar(token)

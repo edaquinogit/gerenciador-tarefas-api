@@ -23,6 +23,7 @@ class TaskService:
             ) from None
         if response.status_code >= 400:
             messages = {
+                400: "Senha atual incorreta ou dados inválidos. Confira e tente novamente.",
                 401: "Credenciais inválidas ou sessão expirada. Entre novamente.",
                 403: "Acesso não permitido. Solicite acesso ao responsável.",
                 404: "Registro não encontrado. Atualize a página.",
@@ -57,3 +58,31 @@ class TaskService:
 
     def deletar(self, tarefa_id: int, token: str):
         return self._request("DELETE", f"/tarefas/{tarefa_id}", token)
+
+    def me(self, token: str):
+        return self._request("GET", "/usuarios/me", token)
+
+    def setores(self, token: str):
+        return self._request("GET", "/setores", token)
+
+    def funcionarios(self, token: str):
+        return self._request("GET", "/admin/funcionarios", token)
+
+    def criar_funcionario(self, data: dict, token: str):
+        return self._request("POST", "/admin/funcionarios", token, json=data)
+
+    def atualizar_funcionario(self, usuario_id: int, data: dict, token: str):
+        return self._request("PATCH", f"/admin/funcionarios/{usuario_id}", token, json=data)
+
+    def redefinir_senha(self, usuario_id: int, password: str, token: str):
+        return self._request(
+            "POST", f"/admin/funcionarios/{usuario_id}/senha", token, json={"password": password}
+        )
+
+    def minha_senha(self, current_password: str, password: str, token: str):
+        return self._request(
+            "POST",
+            "/usuarios/me/senha",
+            token,
+            json={"current_password": current_password, "password": password},
+        )

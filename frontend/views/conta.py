@@ -1,0 +1,24 @@
+import streamlit as st
+
+from frontend.services.task_service import APIError
+
+
+def render_conta(service, token, user, report_error):
+    st.title("Minha conta")
+    st.text(f"Usuário: {user['username']}")
+    st.text(f"E-mail: {user['email']}")
+    with st.form("minha_senha", clear_on_submit=True):
+        current = st.text_input("Senha atual", type="password")
+        password = st.text_input("Nova senha", type="password")
+        confirm = st.text_input("Confirme a nova senha", type="password")
+        if st.form_submit_button("Alterar minha senha"):
+            if password != confirm or len(password) < 8 or len(password.encode()) > 72:
+                st.error("Confirme uma senha com mínimo de 8 caracteres e máximo de 72 bytes.")
+            else:
+                try:
+                    service.minha_senha(current, password, token)
+                    st.session_state.clear()
+                    st.session_state.flash = "Senha alterada. Entre novamente."
+                    st.rerun()
+                except APIError as error:
+                    report_error(error)

@@ -1,6 +1,6 @@
 # Migração da base existente
 
-Esta refatoração mantém as tabelas `usuario` e `tarefa` da versão anterior. Não converte tarefas antigas em ordens de produção e não acrescenta perfis de acesso.
+Esta refatoração mantém as tabelas `usuario` e `tarefa` da versão anterior. Não converte tarefas antigas em ordens de produção e acrescenta os campos de acesso na migração `0002`.
 
 ## Banco novo
 
@@ -36,8 +36,20 @@ Não há downgrade destrutivo da baseline. Mantenha juntos o backup, a revisão 
 - Novo comando da API: `python -m uvicorn backend.main:create_app --factory --reload`.
 - Imports internos são absolutos; não é preciso ajustar `sys.path` ou `PYTHONPATH`.
 - A chave JWT é obrigatória. Se a chave antiga foi pública, substitua-a e faça login novamente.
-- Cadastro público fica desabilitado. Crie contas com `python -m backend.scripts.criar_usuario`.
-- O script antigo `criar_admin.py` foi removido: criava uma conta com senha fixa, sem privilégio administrativo real. Uma conta previamente criada por ele permanece no banco e precisa ter a senha substituída antes de qualquer exposição.
+- Cadastro público fica desabilitado. Crie o primeiro administrador com `python -m backend.scripts.criar_admin --username patrao --email patrao@example.com`; cadastre funcionários pelo painel.
+- O antigo script `criar_admin.py`, com senha fixa, foi substituído por um bootstrap interativo. Contas antigas, inclusive uma conta chamada `admin`, migram como funcionários sem setor. O novo administrador pode redefinir suas senhas e atribuir setores. Nenhuma conta existente ganha privilégios pelo nome.
 - `POST /tarefas` retorna 201; `/concluir` é idempotente, sem alternância para pendente.
 - Conta inativa perde acesso mesmo com um token ainda válido.
 - Não existe exclusão de usuário nesta fase. Tarefas não devem ser apagadas automaticamente quando alguém deixar a empresa.
+
+
+## Upgrade da fase de base (0001) para acessos (0002)
+
+1. Pare a API e faça backup conforme o procedimento acima.
+2. Execute `python -m alembic upgrade head`. Não execute adoção de legado em banco já versionado.
+3. A migração acrescenta `perfil=FUNCIONARIO`, `setor=NULL` e `token_version=0` às contas existentes. Preserva usuários, hashes, IDs e tarefas. Nenhum usuário é promovido automaticamente.
+4. Execute uma única vez o bootstrap do primeiro administrador com a API parada. Se o nome/e-mail já existir, escolha outro para a nova conta administrativa.
+5. Entre no painel administrativo para classificar os funcionários existentes e redefinir senhas antigas quando necessário.
+6. Todos precisam entrar novamente: tokens emitidos antes desta versão não possuem a versão de sessão exigida.
+
+Desativação e redefinição de senha não removem tarefas. Reativar não torna tokens anteriores válidos. O downgrade que apagaria perfis e setores é recusado; para reverter, siga o procedimento de backup e reconciliação.

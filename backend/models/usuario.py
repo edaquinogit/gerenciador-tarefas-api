@@ -7,3 +7,6 @@ class Usuario(SQLModel, table=True):
     email: str = Field(unique=True)
     password_hash: str
     is_active: bool = Field(default=True)
+    perfil: str = Field(default="FUNCIONARIO")
+    setor: str | None = Field(default=None)
+    token_version: int = Field(default=0)

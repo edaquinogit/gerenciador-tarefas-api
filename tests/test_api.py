@@ -68,7 +68,7 @@ def test_disabled_user_cannot_login_or_reuse_token(client, user_factory):
 def test_no_password_hash_in_response(client, user_factory):
     response = client.get("/usuarios/me", headers=user_factory())
     assert response.status_code == 200
-    assert set(response.json()) == {"id", "username", "email", "is_active"}
+    assert set(response.json()) == {"id", "username", "email", "is_active", "perfil", "setor"}
 
 
 @pytest.mark.parametrize("field", ["username", "email"])
@@ -107,13 +107,21 @@ def test_invalid_task_data(client, user_factory, payload):
     assert client.post("/tarefas", headers=user_factory(), json=payload).status_code == 422
 
 
-@pytest.mark.parametrize("kind", ["expired", "missing_exp", "wrong_signature", "invalid"])
+@pytest.mark.parametrize(
+    "kind", ["expired", "missing_exp", "missing_ver", "wrong_signature", "invalid"]
+)
 def test_invalid_tokens(client, user_factory, kind):
     user_factory()
     settings = client.app.state.settings
-    payload = {"sub": "funcionario", "exp": datetime.now(timezone.utc) + timedelta(minutes=1)}
+    payload = {
+        "sub": "funcionario",
+        "ver": 0,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=1),
+    }
     if kind == "expired":
         payload["exp"] = datetime.now(timezone.utc) - timedelta(minutes=1)
+    if kind == "missing_ver":
+        del payload["ver"]
     if kind == "missing_exp":
         del payload["exp"]
     key = "wrong-key" if kind == "wrong_signature" else settings.SECRET_KEY

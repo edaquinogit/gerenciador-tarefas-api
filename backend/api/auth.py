@@ -22,7 +22,11 @@ def login(
         raise HTTPException(
             401, "Usuário ou senha incorretos", headers={"WWW-Authenticate": "Bearer"}
         )
-    return Token(access_token=create_access_token(user.username, request.app.state.settings))
+    return Token(
+        access_token=create_access_token(
+            user.username, request.app.state.settings, user.token_version
+        )
+    )
 
 
 @router.get("/usuarios/me", response_model=UsuarioRead)
