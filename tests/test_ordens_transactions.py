@@ -82,3 +82,41 @@ def test_history_failure_rolls_back_status(tmp_path):
         assert ordem.status == "PENDENTE" and ordem.versao == 1
         assert len(session.exec(select(EventoOrdem)).all()) == 1
     engine.dispose()
+
+
+def test_two_ready_updates_generate_one_notice(tmp_path):
+    from backend.models.notificacao import Notificacao
+
+    engine, ident, user_id = prepare(tmp_path)
+    with Session(engine) as session:
+        for versao, status in ((1, "CORTANDO"), (2, "COSTURANDO")):
+            ordens.executar(
+                session,
+                ident,
+                EtapaUpdate(request_id=uuid4(), versao=versao, status=status),
+                session.get(Usuario, user_id),
+                "ETAPA",
+                destino=status,
+            )
+
+    def finish():
+        with Session(engine) as session:
+            try:
+                ordens.executar(
+                    session,
+                    ident,
+                    EtapaUpdate(request_id=uuid4(), versao=3, status="PRONTO"),
+                    session.get(Usuario, user_id),
+                    "ETAPA",
+                    destino="PRONTO",
+                )
+                return 200
+            except HTTPException as error:
+                return error.status_code
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert sorted(pool.map(lambda _: finish(), range(2))) == [200, 409]
+    with Session(engine) as session:
+        assert len(session.exec(select(Notificacao)).all()) == 1
+        assert session.get(Ordem, ident).status == "PRONTO"
+    engine.dispose()

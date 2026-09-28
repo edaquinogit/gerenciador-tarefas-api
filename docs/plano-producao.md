@@ -9,7 +9,7 @@ Conectar solicitação (em cima), produção (embaixo) e coleta/embalagem. Cada 
 1. **Base — esta branch:** modelos únicos, autenticação centralizada, configuração, serviços, migrações, cliente HTTP, testes e CI. Mantém tarefas pessoais.
 2. **Acessos — implementado nesta branch:** administrador/funcionário, três setores fixos, gerenciamento de funcionários, redefinição e troca de senhas, permissões na API e bootstrap do primeiro administrador. Cada funcionário tem um setor. As ações de produção por setor estão aplicadas na fase 3.
 3. **Ordens — implementado nesta branch:** produto/especificação, quantidade/unidade, prazo, prioridade, solicitante, responsável, histórico e etapas `PENDENTE → CORTANDO → COSTURANDO → PRONTO`.
-4. **Avisos — próximo passo:** central persistente de notificações e atualização periódica. A confirmação independente de coleta, a prevenção de duplicidade e o destaque visual de pronto já estão implementados. A fila atual é atualizada manualmente. Leitura não confirma coleta.
+4. **Avisos — implementado nesta branch:** central persistente por destinatário, gerada na mesma transação da conclusão e consultada a cada 10 segundos com sessão ativa. Leitura individual e idempotente não confirma coleta. O aviso mostra situação atual de retirada/cancelamento. A fila de ordens permanece com atualização manual. Sem avisos externos ou geração retroativa.
 5. **Piloto:** PostgreSQL e driver, migrações validadas, backup e restauração testados, servidor compartilhado, uso com pessoas dos dois setores.
 6. **Indicadores:** tempo por etapa, fila, atrasos, impedimentos e tempo aguardando coleta.
 

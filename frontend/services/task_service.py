@@ -111,3 +111,9 @@ class TaskService:
 
     def cancelar_ordem(self, ident: int, data: dict, token: str):
         return self._request("POST", f"/ordens/{ident}/cancelamento", token, json=data)
+
+    def notificacoes(self, token: str, **params):
+        return self._request("GET", "/notificacoes", token, params=params)
+
+    def ler_notificacao(self, ident: int, token: str):
+        return self._request("PATCH", f"/notificacoes/{ident}/lida", token)

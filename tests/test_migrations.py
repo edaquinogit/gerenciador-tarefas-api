@@ -27,6 +27,7 @@ def test_fresh_database_and_no_schema_drift(tmp_path):
         "tarefa",
         "ordem",
         "eventoordem",
+        "notificacao",
         "alembic_version",
     }
     result = run("-m", "alembic", "check", url=url)

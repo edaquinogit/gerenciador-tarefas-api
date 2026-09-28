@@ -5,6 +5,7 @@ from sqlmodel import Session, select, update
 from backend.models import Usuario
 from backend.models.ordem import EventoOrdem, Ordem, now_utc
 from backend.schemas.ordem import ComandoOrdem, OrdemCreate
+from backend.services.notificacoes import gerar_produto_pronto
 
 SETORES = {"SOLICITACAO", "PRODUCAO", "COLETA_EMBALAGEM"}
 PROXIMA = {"PENDENTE": "CORTANDO", "CORTANDO": "COSTURANDO", "COSTURANDO": "PRONTO"}
@@ -158,19 +159,20 @@ def executar(
             if repetida := repetido():
                 return repetida
             raise HTTPException(409, "Ordem alterada por outra pessoa. Atualize a lista.")
-        session.add(
-            EventoOrdem(
-                request_id=request_id,
-                ordem_id=ident,
-                usuario_id=user.id,
-                usuario_nome=user.username,
-                acao=acao,
-                status_anterior=anterior,
-                status_novo=destino or anterior,
-                motivo=motivo,
-                versao=data.versao + 1,
-            )
+        evento = EventoOrdem(
+            request_id=request_id,
+            ordem_id=ident,
+            usuario_id=user.id,
+            usuario_nome=user.username,
+            acao=acao,
+            status_anterior=anterior,
+            status_novo=destino or anterior,
+            motivo=motivo,
+            versao=data.versao + 1,
         )
+        session.add(evento)
+        if acao == "ETAPA" and destino == "PRONTO":
+            gerar_produto_pronto(session, ordem, evento)
         session.commit()
     except IntegrityError:
         session.rollback()

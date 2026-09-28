@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from frontend.services.task_service import APIError, TaskService
 from frontend.views.admin import render_admin
+from frontend.views.avisos import render_avisos
 from frontend.views.conta import render_conta
 from frontend.views.ordens import render_ordens
 
@@ -68,6 +69,9 @@ with st.sidebar:
     if st.button("Sair"):
         st.session_state.clear()
         st.rerun()
+
+if user["perfil"] == "ADMIN" or user["setor"] in nomes:
+    render_avisos(service, token, report_error)
 
 if page == "Ordens de produção":
     render_ordens(service, token, user, report_error)
