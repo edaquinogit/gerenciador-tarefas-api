@@ -14,6 +14,10 @@ service = TaskService(os.getenv("API_URL", "http://127.0.0.1:8000"))
 st.set_page_config(page_title="Gerenciador de Tarefas", page_icon="📋", layout="centered")
 
 
+if os.getenv("PILOT_MODE") == "true":
+    st.warning("AMBIENTE DE TESTE — use somente dados fictícios.")
+
+
 def report_error(error: APIError):
     if error.status_code == 401 and st.session_state.get("access_token"):
         st.session_state.clear()

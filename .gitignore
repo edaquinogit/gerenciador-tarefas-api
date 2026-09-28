@@ -14,3 +14,6 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Contas, segredos e banco exclusivos do ensaio
+.pilot/
