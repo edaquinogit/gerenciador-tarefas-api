@@ -22,7 +22,13 @@ def test_fresh_database_and_no_schema_drift(tmp_path):
     result = run("-m", "alembic", "upgrade", "head", url=url)
     assert result.returncode == 0, result.stderr
     engine = build_engine(url)
-    assert set(inspect(engine).get_table_names()) == {"usuario", "tarefa", "alembic_version"}
+    assert set(inspect(engine).get_table_names()) == {
+        "usuario",
+        "tarefa",
+        "ordem",
+        "eventoordem",
+        "alembic_version",
+    }
     result = run("-m", "alembic", "check", url=url)
     assert result.returncode == 0, result.stdout + result.stderr
     engine.dispose()

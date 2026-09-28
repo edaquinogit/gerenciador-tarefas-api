@@ -7,13 +7,13 @@ Conectar solicitação (em cima), produção (embaixo) e coleta/embalagem. Cada 
 ## Entregas
 
 1. **Base — esta branch:** modelos únicos, autenticação centralizada, configuração, serviços, migrações, cliente HTTP, testes e CI. Mantém tarefas pessoais.
-2. **Acessos — implementado nesta branch:** administrador/funcionário, três setores fixos, gerenciamento de funcionários, redefinição e troca de senhas, permissões na API e bootstrap do primeiro administrador. Cada funcionário tem um setor. As ações de produção por setor serão aplicadas junto às ordens na fase 3.
-3. **Ordens:** produto/especificação, quantidade/unidade, prazo, prioridade, solicitante, responsável, histórico e etapas `PENDENTE → CORTANDO → COSTURANDO → PRONTO`.
-4. **Aviso e coleta:** status e notificação persistidos na mesma transação, prevenção de duplicidade, painel com atualização periódica e confirmação independente de retirada. Leitura não confirma coleta.
+2. **Acessos — implementado nesta branch:** administrador/funcionário, três setores fixos, gerenciamento de funcionários, redefinição e troca de senhas, permissões na API e bootstrap do primeiro administrador. Cada funcionário tem um setor. As ações de produção por setor estão aplicadas na fase 3.
+3. **Ordens — implementado nesta branch:** produto/especificação, quantidade/unidade, prazo, prioridade, solicitante, responsável, histórico e etapas `PENDENTE → CORTANDO → COSTURANDO → PRONTO`.
+4. **Avisos — próximo passo:** central persistente de notificações e atualização periódica. A confirmação independente de coleta, a prevenção de duplicidade e o destaque visual de pronto já estão implementados. A fila atual é atualizada manualmente. Leitura não confirma coleta.
 5. **Piloto:** PostgreSQL e driver, migrações validadas, backup e restauração testados, servidor compartilhado, uso com pessoas dos dois setores.
 6. **Indicadores:** tempo por etapa, fila, atrasos, impedimentos e tempo aguardando coleta.
 
-## Regras para a próxima fase
+## Regras operacionais e evoluções
 
 - Funcionário não pode administrar contas ou alterar privilégios.
 - Administrador pode corrigir/cancelar com justificativa; ordens operacionais terão histórico em vez de exclusão definitiva.

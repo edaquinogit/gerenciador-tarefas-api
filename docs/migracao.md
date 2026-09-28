@@ -53,3 +53,10 @@ Não há downgrade destrutivo da baseline. Mantenha juntos o backup, a revisão 
 6. Todos precisam entrar novamente: tokens emitidos antes desta versão não possuem a versão de sessão exigida.
 
 Desativação e redefinição de senha não removem tarefas. Reativar não torna tokens anteriores válidos. O downgrade que apagaria perfis e setores é recusado; para reverter, siga o procedimento de backup e reconciliação.
+
+
+## Upgrade para ordens compartilhadas (0003)
+
+Pare a API, faça backup e execute `python -m alembic upgrade head`, seguido de `python -m alembic check`. A migração cria somente `ordem` e `eventoordem`, incluindo chaves estrangeiras e unicidade de envio/versão. Usuários, setores, hashes, tarefas e sessões da fase 0002 são preservados. Tarefas pessoais não são convertidas em ordens.
+
+Valide o ciclo com contas de solicitação, produção e coleta em um banco de teste antes do uso operacional. O downgrade destrutivo que apagaria o histórico é recusado; uma reversão exige backup e reconciliação.

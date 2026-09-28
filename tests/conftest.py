@@ -60,3 +60,28 @@ def admin_headers(client):
         "/token", data={"username": "patrao", "password": "senha-admin-123"}
     ).json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def setores(client, admin_headers):
+    result = {"ADMIN": admin_headers}
+    for setor in ("SOLICITACAO", "PRODUCAO", "COLETA_EMBALAGEM"):
+        name = setor.lower()
+        assert (
+            client.post(
+                "/admin/funcionarios",
+                headers=admin_headers,
+                json={
+                    "username": name,
+                    "email": f"{name}@example.com",
+                    "password": "senha-setor-123",
+                    "setor": setor,
+                },
+            ).status_code
+            == 201
+        )
+        token = client.post(
+            "/token", data={"username": name, "password": "senha-setor-123"}
+        ).json()["access_token"]
+        result[setor] = {"Authorization": f"Bearer {token}"}
+    return result

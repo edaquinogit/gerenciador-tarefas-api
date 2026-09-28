@@ -30,6 +30,13 @@ class TaskService:
                 409: "Usuário ou e-mail já cadastrado.",
                 422: "Dados inválidos. Confira os campos informados.",
             }
+            if path.startswith("/ordens") and response.status_code == 409:
+                try:
+                    detail = response.json().get("detail")
+                    if isinstance(detail, str):
+                        messages[409] = detail
+                except ValueError:
+                    pass
             raise APIError(
                 messages.get(
                     response.status_code,
@@ -86,3 +93,21 @@ class TaskService:
             token,
             json={"current_password": current_password, "password": password},
         )
+
+    def ordens(self, token: str, **params):
+        return self._request("GET", "/ordens", token, params=params)
+
+    def criar_ordem(self, data: dict, token: str):
+        return self._request("POST", "/ordens", token, json=data)
+
+    def historico_ordem(self, ident: int, token: str):
+        return self._request("GET", f"/ordens/{ident}/historico", token)
+
+    def etapa_ordem(self, ident: int, data: dict, token: str):
+        return self._request("PATCH", f"/ordens/{ident}/etapa", token, json=data)
+
+    def coletar_ordem(self, ident: int, data: dict, token: str):
+        return self._request("POST", f"/ordens/{ident}/coleta", token, json=data)
+
+    def cancelar_ordem(self, ident: int, data: dict, token: str):
+        return self._request("POST", f"/ordens/{ident}/cancelamento", token, json=data)
