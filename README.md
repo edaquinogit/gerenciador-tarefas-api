@@ -6,6 +6,10 @@ Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. Esta etapa org
 
 **Ainda não implementado:** avisos externos (WhatsApp/e-mail/push), atualização periódica da fila de ordens, lotes parciais e edição/reabertura de ordens. A central de avisos já se atualiza a cada 10 segundos com sessão ativa. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md), [os avisos](docs/avisos.md) e [o plano de evolução](docs/plano-producao.md).
 
+## Ensaio entre setores
+
+Para testar com quatro contas, banco separado e inicialização em um único terminal, siga [o roteiro prático](docs/piloto.md). A branch `feat/piloto-setores` reúne as etapas anteriores para esse ensaio.
+
 ## Executar localmente
 
 Requer Python 3.11 ou 3.12. Execute os comandos na raiz do repositório.
@@ -122,4 +126,4 @@ python -m pytest -q
 
 Os testes utilizam banco isolado em memória ou arquivos temporários. Não usam o banco configurado pelo usuário. A CI executa os mesmos comandos em Python 3.11 e 3.12.
 
-As dependências diretas estão fixadas por ambiente; as transitivas ainda são resolvidas pelo pip. SQLite é a base validada nesta etapa. PostgreSQL, backup operacional e implantação compartilhada serão tratados antes do piloto; não são declarados como validados aqui.
+As dependências diretas estão fixadas por ambiente; as transitivas ainda são resolvidas pelo pip. SQLite é a base validada nesta etapa. PostgreSQL, backup operacional e implantação definitiva ainda não foram validados. O ensaio controlado em rede local usa apenas dados fictícios e SQLite isolado; veja o roteiro acima.
