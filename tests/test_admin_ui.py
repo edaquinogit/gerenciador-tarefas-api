@@ -24,7 +24,7 @@ def test_admin_ui_creates_and_deactivates_employee(monkeypatch, client, admin_he
     assert not app.exception
     assert app.title[0].value == "Funcionários e setores"
     labeled(app.text_input, "Nome de usuário").set_value("costureira")
-    labeled(app.text_input, "E-mail").set_value("costureira@example.com")
+    labeled(app.text_input, "Telefone com DDD").set_value("(79) 99999-0001")
     labeled(app.selectbox, "Setor").select("PRODUCAO")
     labeled(app.text_input, "Senha inicial").set_value("senha-func-123")
     labeled(app.text_input, "Confirme a senha inicial").set_value("senha-func-123")
@@ -44,7 +44,7 @@ def test_employee_ui_shows_sector_and_no_admin_menu(monkeypatch, client, admin_h
         headers=admin_headers,
         json={
             "username": "operador",
-            "email": "operador@example.com",
+            "telefone": "79999990001",
             "password": "senha-func-123",
             "setor": "COLETA_EMBALAGEM",
         },
@@ -56,3 +56,19 @@ def test_employee_ui_shows_sector_and_no_admin_menu(monkeypatch, client, admin_h
     assert not app.exception
     assert "Funcionários e setores" not in app.radio[0].options
     assert any("Coleta e embalagem" in e.value for e in app.caption)
+
+
+def test_my_account_phone_update_and_invalid_input(monkeypatch, client, admin_headers):
+    app = app_with_api(monkeypatch, client)
+    app.session_state.access_token = admin_headers["Authorization"].removeprefix("Bearer ")
+    app.run()
+    labeled(app.radio, "Menu").set_value("Minha conta").run()
+    assert not app.exception
+    assert all(e.label != "E-mail" for e in app.text_input)
+    labeled(app.text_input, "Telefone com DDD").set_value("123")
+    labeled(app.button, "Salvar telefone").click().run()
+    assert app.error and "DDD" in app.error[0].value
+    labeled(app.text_input, "Telefone com DDD").set_value("(79) 3222-0001")
+    labeled(app.button, "Salvar telefone").click().run()
+    assert not app.exception and not app.error
+    assert client.get("/usuarios/me", headers=admin_headers).json()["telefone"] == "+557932220001"

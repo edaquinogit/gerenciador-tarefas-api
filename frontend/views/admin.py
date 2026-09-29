@@ -1,6 +1,7 @@
 import streamlit as st
 
 from frontend.services.task_service import APIError
+from shared.telefone import normalizar_telefone
 
 
 def render_admin(service, token, report_error):
@@ -24,7 +25,9 @@ def render_admin(service, token, report_error):
     with st.expander("Cadastrar funcionário"):
         with st.form("cadastro_funcionario", clear_on_submit=True):
             username = st.text_input("Nome de usuário", max_chars=64)
-            email = st.text_input("E-mail", max_chars=254)
+            telefone = st.text_input(
+                "Telefone com DDD", max_chars=32, placeholder="(79) 99999-0000"
+            )
             setor = st.selectbox("Setor", list(nomes), format_func=nomes.get)
             password = st.text_input("Senha inicial", type="password")
             confirm = st.text_input("Confirme a senha inicial", type="password")
@@ -33,19 +36,19 @@ def render_admin(service, token, report_error):
                     st.error("As senhas não coincidem.")
                 elif (
                     not username.strip()
-                    or not email.strip()
+                    or not telefone.strip()
                     or len(password) < 8
                     or len(password.encode()) > 72
                 ):
                     st.error(
-                        "Preencha usuário, e-mail e senha com mínimo de 8 caracteres e máximo de 72 bytes."
+                        "Preencha usuário, telefone com DDD e senha com mínimo de 8 caracteres e máximo de 72 bytes."
                     )
                 else:
                     try:
                         service.criar_funcionario(
                             {
                                 "username": username.strip(),
-                                "email": email.strip(),
+                                "telefone": normalizar_telefone(telefone),
                                 "setor": setor,
                                 "password": password,
                             },
@@ -55,6 +58,8 @@ def render_admin(service, token, report_error):
                             "Funcionário cadastrado. Informe as credenciais diretamente à pessoa."
                         )
                         st.rerun()
+                    except ValueError as error:
+                        st.error(str(error))
                     except APIError as error:
                         report_error(error)
 
@@ -77,8 +82,14 @@ def render_admin(service, token, report_error):
         with st.expander(
             f"{funcionario['username']} — {nomes.get(funcionario['setor'], 'Sem setor')} — {'Ativo' if funcionario['is_active'] else 'Inativo'}"
         ):
-            st.text(funcionario["email"])
+            st.text(f"Telefone: {funcionario['telefone'] or 'Não informado'}")
             with st.form(f"editar_{ident}"):
+                telefone_atual = st.text_input(
+                    "Telefone do funcionário",
+                    value=funcionario["telefone"] or "",
+                    max_chars=32,
+                    key=f"telefone_{ident}",
+                )
                 options = list(nomes)
                 setor = st.selectbox(
                     "Setor do funcionário",
@@ -98,13 +109,16 @@ def render_admin(service, token, report_error):
                         st.error("Selecione um setor.")
                     else:
                         try:
-                            service.atualizar_funcionario(
-                                ident, {"setor": setor, "is_active": ativo}, token
-                            )
+                            data = {"setor": setor, "is_active": ativo}
+                            if telefone_atual.strip() or funcionario["telefone"]:
+                                data["telefone"] = normalizar_telefone(telefone_atual)
+                            service.atualizar_funcionario(ident, data, token)
                             st.session_state.flash = (
                                 "Funcionário atualizado. Será necessário entrar novamente."
                             )
                             st.rerun()
+                        except ValueError as error:
+                            st.error(str(error))
                         except APIError as error:
                             report_error(error)
             with st.form(f"senha_{ident}", clear_on_submit=True):

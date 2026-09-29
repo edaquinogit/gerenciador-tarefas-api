@@ -4,11 +4,11 @@ Objetivo: ensaiar um lote fictício completo com uma pessoa na solicitação, um
 
 ## Preparação no computador que hospedará o teste
 
-Use Python 3.11 ou 3.12, preferencialmente Windows nativo se os outros computadores forem Windows. A branch `feat/piloto-setores` já contém as etapas anteriores; não é necessário mesclar os PRs para testar. Em um clone do projeto, sem alterações locais pendentes:
+Use Python 3.11 ou 3.12, preferencialmente Windows nativo se os outros computadores forem Windows. A branch `feat/telefone-painel-adm` já contém as etapas anteriores; não é necessário mesclar os PRs para testar. Em um clone do projeto, sem alterações locais pendentes:
 
 ```bash
 git fetch origin
-git switch feat/piloto-setores
+git switch feat/telefone-painel-adm
 python -m venv .venv
 ```
 
@@ -33,6 +33,8 @@ A pasta `.pilot` contém banco SQLite, configuração e `acessos.json` com quatr
 | `piloto_coleta` | Recebe o aviso e confirma a coleta do lote |
 
 Use computadores, perfis de navegador ou sessões independentes. Quatro abas compartilhando uma sessão não são uma boa simulação de quatro funcionários. Para testar com mais pessoas, o administrador deve cadastrar uma conta por pessoa.
+
+Os contatos das contas de demonstração são números fictícios usados somente para validar o formulário; o sistema não envia mensagens ou ligações. Para atualizar um ensaio antigo, preserve/mova a pasta `.pilot` inteira e prepare um novo ensaio com a versão atual.
 
 ## Compartilhar com os setores
 
@@ -59,7 +61,7 @@ Anote o ID da ordem e os horários. Na fila, use **Atualizar** após cada mudan�
 | 5 | Produção marca PRONTO | Admin, solicitante e coleta recebem um aviso cada, disponível para coleta |
 | 6 | Solicitação marca seu aviso como lido | Aviso da coleta continua não lido; ordem continua aguardando coleta |
 | 7 | Coleta confirma o lote completo | Ordem registra coletor e horário; aviso passa a indicar coletada |
-| 8 | Admin abre histórico | Sequência completa com responsáveis; nenhuma etapa perdida |
+| 8 | Admin clica em Todas as tarefas no topo, acompanha uma mudança e abre o histórico em Ordens de produção | Painel atualiza em até o próximo ciclo de consulta com a aba ativa; histórico mantém a sequência completa |
 | 9 | Todos saem; anfitrião encerra e inicia novamente | Novo login mantém ordem, histórico, avisos e leituras |
 
 A embalagem física faz parte da rotina do setor, mas **não há status “EMBALADO”**: a confirmação registra coleta. Também não há entrega parcial, reabertura ou edição de ordem.

@@ -2,13 +2,17 @@
 
 Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. Esta etapa organiza a base existente para a futura operação de solicitação, corte, costura e coleta.
 
-**Disponível agora:** administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações de conta ou senha revogam sessões anteriores.
+**Disponível agora:** cadastro por telefone com DDD, painel global do administrador com atualização a cada 10 segundos, administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações administrativas de conta e trocas de senha revogam sessões anteriores; atualizar o próprio telefone mantém a sessão.
 
-**Ainda não implementado:** avisos externos (WhatsApp/e-mail/push), atualização periódica da fila de ordens, lotes parciais e edição/reabertura de ordens. A central de avisos já se atualiza a cada 10 segundos com sessão ativa. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md), [os avisos](docs/avisos.md) e [o plano de evolução](docs/plano-producao.md).
+**Ainda não implementado:** avisos externos (WhatsApp/e-mail/push), atualização periódica da tela operacional de ordens, lotes parciais e edição/reabertura de ordens. O painel **Todas as tarefas** do administrador e a central de avisos se atualizam a cada 10 segundos com sessão ativa. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md), [os avisos](docs/avisos.md) e [o plano de evolução](docs/plano-producao.md).
 
 ## Ensaio entre setores
 
-Para testar com quatro contas, banco separado e inicialização em um único terminal, siga [o roteiro prático](docs/piloto.md). A branch `feat/piloto-setores` reúne as etapas anteriores para esse ensaio.
+Para testar com quatro contas, banco separado e inicialização em um único terminal, siga [o roteiro prático](docs/piloto.md). A branch `feat/telefone-painel-adm` reúne as etapas anteriores para esse ensaio.
+
+## Atualização de uma instalação existente
+
+A versão 2.5 substitui `email` por `telefone` nos cadastros e respostas da API. Com os serviços parados, faça backup e aplique a migração `0005` antes de reiniciar. Veja [a atualização para telefone](docs/migracao.md#upgrade-para-telefone-0005) e [o painel geral](docs/painel-adm.md). Não recrie o administrador existente.
 
 ## Executar localmente
 
@@ -35,10 +39,10 @@ O comando de configuração não sobrescreve um `.env` existente. Nesse caso, re
 
 ```bash
 python -m alembic upgrade head
-python -m backend.scripts.criar_admin --username patrao --email patrao@example.com
+python -m backend.scripts.criar_admin --username patrao --telefone "(79) 99999-0001"
 ```
 
-O comando cria o **primeiro administrador**, solicita senha e confirmação no terminal e recusa execução quando já existe um administrador. Execute uma única instância com a API parada. Não há senha fixa nem promoção automática de uma conta antiga com nome `admin`. Se o nome/e-mail já existir, use outro cadastro para o administrador.
+O comando cria o **primeiro administrador**, solicita senha e confirmação no terminal e recusa execução quando já existe um administrador. Execute uma única instância com a API parada. Não há senha fixa nem promoção automática de uma conta antiga com nome `admin`. Se o nome de usuário já existir, use outro cadastro para o administrador.
 
 Entre no Streamlit e abra **Funcionários e setores** para cadastrar funcionários, atribuir setor, ativar/desativar e redefinir senhas. Veja [o guia de acessos](docs/acessos.md).
 
@@ -94,14 +98,16 @@ O `.env` anteriormente versionado foi retirado desta branch, mas permanece no hi
 | `migrations/` | Evolução versionada do banco |
 | `tests/` | API, interface, configuração e migrações |
 
-O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt. A migração `0002` acrescenta perfil, setor e versão de sessão; `0003` cria ordens e histórico; `0004` acrescenta avisos persistentes.
+O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt. A migração `0002` acrescenta perfil, setor e versão de sessão; `0003` cria ordens e histórico; `0004` acrescenta avisos persistentes; `0005` adiciona telefone e torna o e-mail legado opcional, preservando os valores existentes.
 
 ## Contratos HTTP
 
 | Método e caminho | Comportamento |
 |---|---|
 | `POST /token` | Login por formulário; retorna JWT |
-| `GET /usuarios/me` | Dados públicos do usuário conectado |
+| `GET /usuarios/me` | Dados do próprio usuário, incluindo telefone |
+| `PATCH /usuarios/me/telefone` | Atualizar o próprio contato |
+| `GET /admin/tarefas` | Consulta global paginada, somente administrador |
 | `POST /usuarios` | Cadastro de desenvolvimento, se habilitado; sempre funcionário sem setor |
 | `GET /setores` | Catálogo fixo de setores, exige login |
 | `GET/POST /admin/funcionarios` | Listar/criar funcionários, somente administrador |

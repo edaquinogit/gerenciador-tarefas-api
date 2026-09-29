@@ -6,10 +6,10 @@ Na raiz do projeto, com ambiente virtual e `.env` configurados:
 
 ```bash
 python -m alembic upgrade head
-python -m backend.scripts.criar_admin --username patrao --email patrao@example.com
+python -m backend.scripts.criar_admin --username patrao --telefone "(79) 99999-0001"
 ```
 
-Informe e confirme uma senha (mínimo 8 caracteres, máximo 72 bytes UTF-8). Rode o bootstrap uma única vez com a API parada. Ele recusa um segundo administrador e não promove contas existentes; se usuário/e-mail já estiverem ocupados, escolha outros para o novo cadastro administrativo.
+Informe e confirme uma senha (mínimo 8 caracteres, máximo 72 bytes UTF-8). Rode o bootstrap uma única vez com a API parada. Ele recusa um segundo administrador e não promove contas existentes; se nome de usuário já estiver ocupado, escolha outro para o novo cadastro administrativo.
 
 Depois inicie API e Streamlit conforme o README. O administrador entra diretamente no painel **Funcionários e setores**. Cadastre uma conta individual para cada funcionário e informe as credenciais diretamente à pessoa. O funcionário pode alterar a senha em **Minha conta**.
 
@@ -46,9 +46,20 @@ O cadastro público permanece desabilitado por padrão. `ALLOW_REGISTRATION=true
 Para manutenção local, há também cadastro de funcionário por terminal:
 
 ```bash
-python -m backend.scripts.criar_usuario --username operador --email operador@example.com --setor PRODUCAO
+python -m backend.scripts.criar_usuario --username operador --telefone "(79) 99999-0002" --setor PRODUCAO
 ```
 
 ## Ordens compartilhadas
 
 Os setores agora controlam as operações de ordens: solicitação cria; produção avança as etapas; coleta confirma retirada. Todos consultam a fila e o histórico, e o administrador pode executar todas as operações e cancelar com justificativa. Veja [o guia de ordens](ordens.md). Tarefas pessoais antigas permanecem separadas.
+
+
+## Contato por telefone (versão 2.5)
+
+Novos cadastros exigem `telefone` com DDD em lugar de `email`. Aceita fixo de 10 dígitos e celular de 11 dígitos, com espaços, parênteses e hífen; `+55` é opcional na entrada. O armazenamento usa `+55` seguido de DDD e número. Valida apenas formato, sem confirmar titularidade ou existência. Exemplos de documentação são fictícios.
+
+O login continua com nome de usuário e senha. Telefone não é único: duas pessoas podem compartilhar um contato corporativo sem compartilhar suas contas. E-mail deixou de ser aceito nos novos cadastros e não aparece nas respostas; valores antigos permanecem apenas no banco para preservação do legado.
+
+Contas anteriores à migração aparecem com **Telefone: Não informado** e continuam acessíveis. O administrador pode preencher/corrigir o telefone em Funcionários e setores. Em **Minha conta**, qualquer usuário pode atualizar somente seu próprio contato, incluindo o administrador. O endpoint de contato não permite mudar perfil, setor ou outra conta.
+
+Salvar setor/ativação/telefone pelo painel de funcionários encerra as sessões desse funcionário, conforme a regra de edição já existente. Atualizar o próprio contato em Minha conta não encerra a sessão. Não há envio por WhatsApp/SMS, recuperação de senha por telefone ou login por telefone nesta etapa.

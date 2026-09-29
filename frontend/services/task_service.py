@@ -27,7 +27,7 @@ class TaskService:
                 401: "Credenciais inválidas ou sessão expirada. Entre novamente.",
                 403: "Acesso não permitido. Solicite acesso ao responsável.",
                 404: "Registro não encontrado. Atualize a página.",
-                409: "Usuário ou e-mail já cadastrado.",
+                409: "Nome de usuário já cadastrado.",
                 422: "Dados inválidos. Confira os campos informados.",
             }
             if path.startswith("/ordens") and response.status_code == 409:
@@ -117,3 +117,9 @@ class TaskService:
 
     def ler_notificacao(self, ident: int, token: str):
         return self._request("PATCH", f"/notificacoes/{ident}/lida", token)
+
+    def meu_telefone(self, telefone: str, token: str):
+        return self._request("PATCH", "/usuarios/me/telefone", token, json={"telefone": telefone})
+
+    def todas_tarefas(self, token: str, **params):
+        return self._request("GET", "/admin/tarefas", token, params=params)

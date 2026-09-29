@@ -19,7 +19,7 @@ def prepare(tmp_path):
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         user = Usuario(
-            username="admin", email="admin@example.com", password_hash="unused", perfil="ADMIN"
+            username="admin", telefone="79999990001", password_hash="unused", perfil="ADMIN"
         )
         session.add(user)
         session.commit()

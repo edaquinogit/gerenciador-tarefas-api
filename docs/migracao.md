@@ -36,7 +36,7 @@ Não há downgrade destrutivo da baseline. Mantenha juntos o backup, a revisão 
 - Novo comando da API: `python -m uvicorn backend.main:create_app --factory --reload`.
 - Imports internos são absolutos; não é preciso ajustar `sys.path` ou `PYTHONPATH`.
 - A chave JWT é obrigatória. Se a chave antiga foi pública, substitua-a e faça login novamente.
-- Cadastro público fica desabilitado. Crie o primeiro administrador com `python -m backend.scripts.criar_admin --username patrao --email patrao@example.com`; cadastre funcionários pelo painel.
+- Cadastro público fica desabilitado. Crie o primeiro administrador com `python -m backend.scripts.criar_admin --username patrao --telefone "(79) 99999-0001"`; cadastre funcionários pelo painel.
 - O antigo script `criar_admin.py`, com senha fixa, foi substituído por um bootstrap interativo. Contas antigas, inclusive uma conta chamada `admin`, migram como funcionários sem setor. O novo administrador pode redefinir suas senhas e atribuir setores. Nenhuma conta existente ganha privilégios pelo nome.
 - `POST /tarefas` retorna 201; `/concluir` é idempotente, sem alternância para pendente.
 - Conta inativa perde acesso mesmo com um token ainda válido.
@@ -48,7 +48,7 @@ Não há downgrade destrutivo da baseline. Mantenha juntos o backup, a revisão 
 1. Pare a API e faça backup conforme o procedimento acima.
 2. Execute `python -m alembic upgrade head`. Não execute adoção de legado em banco já versionado.
 3. A migração acrescenta `perfil=FUNCIONARIO`, `setor=NULL` e `token_version=0` às contas existentes. Preserva usuários, hashes, IDs e tarefas. Nenhum usuário é promovido automaticamente.
-4. Execute uma única vez o bootstrap do primeiro administrador com a API parada. Se o nome/e-mail já existir, escolha outro para a nova conta administrativa.
+4. Execute uma única vez o bootstrap do primeiro administrador com a API parada. Se o nome de usuário já existir, escolha outro para a nova conta administrativa.
 5. Entre no painel administrativo para classificar os funcionários existentes e redefinir senhas antigas quando necessário.
 6. Todos precisam entrar novamente: tokens emitidos antes desta versão não possuem a versão de sessão exigida.
 
@@ -65,3 +65,24 @@ Valide o ciclo com contas de solicitação, produção e coleta em um banco de t
 ## Upgrade para avisos (0004)
 
 Pare a API, faça backup e execute `python -m alembic upgrade head` e `python -m alembic check`. A nova tabela `notificacao` preserva ordens e histórico existentes. Não há avisos retroativos para lotes que já estavam prontos antes da migração. Conclusões posteriores geram avisos persistentes na mesma transação; teste com usuários de solicitação e coleta. A coleta é independente da leitura de avisos. Consulte docs/avisos.md.
+
+
+## Upgrade para telefone (0005)
+
+Para sua instalação que já mostra `0004 (head)`, **não execute novamente criar_admin** e não apague o banco. Antes de atualizar, pare API e Streamlit, faça o backup descrito acima e preserve a revisão anterior do código. Aplique e teste primeiro em uma cópia.
+
+Depois de obter a branch `feat/telefone-painel-adm`, com ambiente virtual ativado e na raiz do projeto:
+
+```bash
+python -m alembic upgrade head
+python -m alembic current
+python -m alembic check
+```
+
+O resultado esperado é `0005 (head)` e nenhuma mudança de schema pendente. Reinicie API e interface com os comandos do README. Entre com o **mesmo usuário e senha**. Complete seu contato em Minha conta; novos funcionários pedem telefone com DDD. No topo da tela administrativa, clique em **Todas as tarefas**.
+
+A migração acrescenta telefone nulo às contas existentes e torna e-mail opcional, sem apagar e-mails anteriores. Preserva IDs, senhas, perfis, setores, versões de sessão, tarefas, ordens, eventos e avisos. No SQLite, a alteração exige reconstruir a tabela de usuários: as chaves estrangeiras são desativadas somente na conexão de migração, e as referências são verificadas antes do commit. Se houver referências inválidas, a transação é revertida e a migração falha. Nas conexões da aplicação as verificações permanecem ativas.
+
+O contrato de cadastro mudou: atualize clientes da API de `email` para `telefone`. Não execute interface antiga contra API nova nem o contrário. Não existe conversão de e-mail em telefone nem preenchimento fictício de contas reais.
+
+Para o ensaio `.pilot`, estes comandos comuns leem `.env` e **não devem ser usados para tentar atualizar seu banco de demonstração**. Preserve a pasta `.pilot` completa fora do repositório, com serviços parados, e prepare um novo ensaio pelo comando `piloto preparar`, conforme docs/piloto.md. Guarde a versão anterior junto dos dados se precisar retomar o ensaio antigo.

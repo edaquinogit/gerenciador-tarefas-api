@@ -12,7 +12,7 @@ def criar_usuario(
 ) -> Usuario:
     user = Usuario(
         username=data.username,
-        email=data.email,
+        telefone=data.telefone,
         password_hash=get_password_hash(data.password),
         perfil=perfil,
         setor=setor,
@@ -22,7 +22,7 @@ def criar_usuario(
         session.commit()
     except IntegrityError:
         session.rollback()
-        raise HTTPException(409, "Usuário ou e-mail já cadastrado") from None
+        raise HTTPException(409, "Nome de usuário já cadastrado") from None
     session.refresh(user)
     return user
 
@@ -46,10 +46,12 @@ def buscar_funcionario(session: Session, usuario_id: int) -> Usuario:
 
 def atualizar_funcionario(session: Session, usuario_id: int, data: FuncionarioUpdate) -> Usuario:
     buscar_funcionario(session, usuario_id)
+    contato = {"telefone": data.telefone} if "telefone" in data.model_fields_set else {}
     session.exec(
         update(Usuario)
         .where(Usuario.id == usuario_id)
         .values(
+            **contato,
             setor=data.setor,
             is_active=data.is_active,
             token_version=Usuario.token_version + 1,
@@ -85,3 +87,10 @@ def criar_primeiro_admin(session: Session, data: UsuarioCreate) -> Usuario:
     if session.exec(select(Usuario).where(Usuario.perfil == "ADMIN")).first():
         raise HTTPException(409, "Administrador já existe; bootstrap recusado")
     return criar_usuario(session, data, perfil="ADMIN")
+
+
+def atualizar_meu_telefone(session: Session, user: Usuario, telefone: str) -> Usuario:
+    session.exec(update(Usuario).where(Usuario.id == user.id).values(telefone=telefone))
+    session.commit()
+    session.refresh(user)
+    return user

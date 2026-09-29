@@ -33,8 +33,8 @@ def test_bootstrap_command_and_local_employee_command(tmp_path):
         "backend.scripts.criar_admin",
         "--username",
         "patrao",
-        "--email",
-        "patrao@example.com",
+        "--telefone",
+        "79999990001",
     )
     result = run(*args, password="senha-admin-123")
     assert result.returncode == 0, result.stderr
@@ -47,8 +47,8 @@ def test_bootstrap_command_and_local_employee_command(tmp_path):
         "backend.scripts.criar_usuario",
         "--username",
         "operador",
-        "--email",
-        "operador@example.com",
+        "--telefone",
+        "79999990002",
         "--setor",
         "PRODUCAO",
         password="senha-func-123",

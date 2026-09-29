@@ -64,12 +64,12 @@ def prepare(directory: Path = PILOT):
     credentials = []
     try:
         with Session(engine) as session:
-            for username, role, sector in ACCOUNTS:
+            for index, (username, role, sector) in enumerate(ACCOUNTS, start=1):
                 password = secrets.token_urlsafe(18)
                 criar_usuario(
                     session,
                     UsuarioCreate(
-                        username=username, email=f"{username}@example.com", password=password
+                        username=username, telefone=f"7999999000{index}", password=password
                     ),
                     perfil=role,
                     setor=sector,

@@ -68,14 +68,13 @@ def test_disabled_user_cannot_login_or_reuse_token(client, user_factory):
 def test_no_password_hash_in_response(client, user_factory):
     response = client.get("/usuarios/me", headers=user_factory())
     assert response.status_code == 200
-    assert set(response.json()) == {"id", "username", "email", "is_active", "perfil", "setor"}
+    assert set(response.json()) == {"id", "username", "telefone", "is_active", "perfil", "setor"}
 
 
-@pytest.mark.parametrize("field", ["username", "email"])
-def test_duplicate_account_is_conflict(client, user_factory, field):
+def test_duplicate_account_is_conflict(client, user_factory):
     user_factory()
-    data = {"username": "outro", "email": "outro@example.com", "password": "senha-segura-123"}
-    data[field] = "funcionario" if field == "username" else "funcionario@example.com"
+    data = {"username": "outro", "telefone": "79999990001", "password": "senha-segura-123"}
+    data["username"] = "funcionario"
     assert client.post("/usuarios", json=data).status_code == 409
 
 
@@ -86,7 +85,7 @@ def test_public_registration_can_be_disabled(client):
             "/usuarios",
             json={
                 "username": "teste",
-                "email": "teste@example.com",
+                "telefone": "79999990001",
                 "password": "senha-segura-123",
             },
         ).status_code

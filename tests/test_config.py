@@ -33,4 +33,4 @@ def test_legacy_bcrypt_compatibility():
 
 def test_password_byte_limit():
     with pytest.raises(ValidationError):
-        UsuarioCreate(username="teste", email="teste@example.com", password="á" * 37)
+        UsuarioCreate(username="teste", telefone="79999990001", password="á" * 37)

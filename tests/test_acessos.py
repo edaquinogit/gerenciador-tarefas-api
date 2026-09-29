@@ -8,7 +8,7 @@ from backend.services.usuarios import criar_primeiro_admin
 
 DADOS = {
     "username": "costureira",
-    "email": "costureira@example.com",
+    "telefone": "79999990001",
     "password": "senha-func-123",
     "setor": "PRODUCAO",
 }
@@ -167,7 +167,7 @@ def test_bootstrap_refuses_second_admin(client, admin_headers):
             criar_primeiro_admin(
                 session,
                 UsuarioCreate(
-                    username="outro", email="outro@example.com", password="senha-valida-123"
+                    username="outro", telefone="79999990001", password="senha-valida-123"
                 ),
             )
         assert error.value.status_code == 409

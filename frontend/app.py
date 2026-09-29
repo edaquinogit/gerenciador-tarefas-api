@@ -8,6 +8,7 @@ from frontend.views.admin import render_admin
 from frontend.views.avisos import render_avisos
 from frontend.views.conta import render_conta
 from frontend.views.ordens import render_ordens
+from frontend.views.painel import render_painel
 
 load_dotenv()
 service = TaskService(os.getenv("API_URL", "http://127.0.0.1:8000"))
@@ -16,6 +17,10 @@ st.set_page_config(page_title="Gerenciador de Tarefas", page_icon="📋", layout
 
 if os.getenv("PILOT_MODE") == "true":
     st.warning("AMBIENTE DE TESTE — use somente dados fictícios.")
+
+
+def clear_session():
+    st.session_state.clear()
 
 
 def report_error(error: APIError):
@@ -54,6 +59,10 @@ except APIError as error:
         st.rerun()
     st.stop()
 
+if user["perfil"] == "ADMIN":
+    if st.button("Todas as tarefas", key="abrir_painel", type="primary"):
+        st.session_state["pagina_principal"] = "Todas as tarefas"
+
 with st.sidebar:
     st.write(f"Usuário: {user['username']}")
     st.caption("Administrador" if user["perfil"] == "ADMIN" else "Funcionário")
@@ -69,13 +78,18 @@ with st.sidebar:
         options.insert(0, "Ordens de produção")
     if user["perfil"] == "ADMIN":
         options.insert(0, "Funcionários e setores")
-    page = st.radio("Menu", options)
-    if st.button("Sair"):
-        st.session_state.clear()
-        st.rerun()
+        options.append("Todas as tarefas")
+    if st.session_state.get("pagina_principal") not in options:
+        st.session_state["pagina_principal"] = options[0]
+    page = st.radio("Menu", options, key="pagina_principal")
+    st.button("Sair", on_click=clear_session)
 
 if user["perfil"] == "ADMIN" or user["setor"] in nomes:
     render_avisos(service, token, report_error)
+
+if page == "Todas as tarefas" and user["perfil"] == "ADMIN":
+    render_painel(service, token, report_error)
+    st.stop()
 
 if page == "Ordens de produção":
     render_ordens(service, token, user, report_error)
@@ -90,6 +104,7 @@ if user["perfil"] == "FUNCIONARIO" and not user["setor"]:
     st.warning("Seu setor ainda não foi definido. Solicite a classificação ao administrador.")
 
 st.title("Minhas tarefas")
+st.caption("O administrador também pode acompanhar estas tarefas no painel geral.")
 try:
     tarefas = service.listar(token)
 except APIError as error:

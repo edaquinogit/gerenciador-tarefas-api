@@ -16,16 +16,16 @@ from backend.services.usuarios import criar_primeiro_admin
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--username", required=True)
-    parser.add_argument("--email", required=True)
+    parser.add_argument("--telefone", required=True)
     args = parser.parse_args()
     password = getpass("Senha do administrador (mínimo 8 caracteres): ")
     if password != getpass("Confirme a senha: "):
         raise SystemExit("Senhas diferentes")
     try:
-        data = UsuarioCreate(username=args.username, email=args.email, password=password)
+        data = UsuarioCreate(username=args.username, telefone=args.telefone, password=password)
     except ValidationError:
         raise SystemExit(
-            "Dados inválidos: confira nome, e-mail e senha de 8 caracteres a 72 bytes."
+            "Dados inválidos: confira nome, telefone com DDD e senha de 8 caracteres a 72 bytes."
         ) from None
     engine = build_engine(get_settings().DATABASE_URL)
     try:
