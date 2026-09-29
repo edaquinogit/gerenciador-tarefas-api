@@ -1,4 +1,16 @@
-.venv/
+# Local settings and data
+.env
+.env.*
+!.env.example
+**/.streamlit/secrets.toml
 *.db
+*.db-*
+*.sqlite*
+*.bak
+.venv/
 __pycache__/
-*.log
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/

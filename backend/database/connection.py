@@ -1,31 +1,23 @@
-from sqlmodel import SQLModel, create_engine, Session
-import os
+from fastapi import Request
+from sqlalchemy import event
+from sqlmodel import Session, create_engine
 
-# Importamos os modelos para que o SQLModel "saiba" que as tabelas existem
-# antes de tentar criá-las
-from schemas.models import Usuario, Tarefa 
 
-# -------------------------
-# URL do banco
-# -------------------------
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///database.db"  # padrão local
-)
+def build_engine(database_url: str, **kwargs):
+    engine = create_engine(
+        database_url,
+        connect_args={"check_same_thread": False} if database_url.startswith("sqlite") else {},
+        **kwargs,
+    )
+    if database_url.startswith("sqlite"):
 
-# -------------------------
-# Engine
-# -------------------------
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-    if DATABASE_URL.startswith("sqlite")
-    else {},
-)
+        @event.listens_for(engine, "connect")
+        def enable_foreign_keys(connection, _):
+            connection.execute("PRAGMA foreign_keys=ON")
 
-# -------------------------
-# Sessão (Dependency Injection)
-# -------------------------
-def get_session():
-    with Session(engine) as session:
+    return engine
+
+
+def get_session(request: Request):
+    with Session(request.app.state.engine) as session:
         yield session

@@ -1,92 +1,118 @@
-﻿# 🎯 Pro Task Manager - Full-Stack Application
+# Gerenciador de tarefas — base para controle de produção
 
-[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.25+-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![SQLModel](https://img.shields.io/badge/SQLModel-Latest-black?style=flat)](https://sqlmodel.tiangolo.com/)
+Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. Esta etapa organiza a base existente para a futura operação de solicitação, corte, costura e coleta.
 
-O **Pro Task Manager** é uma solução completa para gerenciamento de tarefas, desenvolvida para demonstrar a integração entre uma API robusta em **FastAPI** e um frontend interativo em **Streamlit**. O projeto foca em segurança, utilizando autenticação JWT e uma arquitetura organizada em camadas.
+**Disponível agora:** autenticação JWT, contas individuais, tarefas pessoais com prioridade, conclusão idempotente, migrações e testes automatizados. Usuários inativos não conseguem entrar nem reutilizar tokens.
 
----
+**Ainda não implementado:** perfis administrador/funcionário, setores, ordens compartilhadas, etapas de produção e notificações. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o plano de evolução](docs/plano-producao.md).
 
-## 🚀 Funcionalidades
+## Executar localmente
 
-- **Sistema de Autenticação:** Registro de novos usuários e login seguro com JWT (JSON Web Tokens).
-- **CRUD de Tarefas:** Criação, listagem, conclusão (check) e exclusão de tarefas.
-- **Painel de Progresso:** Visualização dinâmica do percentual de conclusão das tarefas com efeitos visuais (balloons).
-- **Priorização:** Classificação de tarefas por níveis de urgência (Baixa, Média, Alta).
-- **Validação de Cadastro:** Implementação de Captcha matemático para evitar bots no registro.
+Requer Python 3.11 ou 3.12. Execute os comandos na raiz do repositório.
 
----
-
-## 🛠️ Tecnologias Utilizadas
-
-### **Backend**
-- **FastAPI:** Framework web de alta performance.
-- **SQLModel (SQLAlchemy + Pydantic):** Para interação simplificada com o banco de dados.
-- **SQLite:** Banco de dados relacional leve e eficiente.
-- **Passlib & Bcrypt:** Para hashing seguro de senhas.
-- **PyJWT:** Geração e validação de tokens de acesso.
-
-### **Frontend**
-- **Streamlit:** Framework para criação de interfaces web rápidas e intuitivas.
-- **Requests:** Para comunicação assíncrona com a API.
-- **Python Dotenv:** Gerenciamento de variáveis de ambiente.
-
----
-
-## 🏗️ Arquitetura do Projeto
-
-O projeto segue uma estrutura de separação de responsabilidades para facilitar a manutenção e evolução:
-
-```text
-📂 Gerenciador_API_V2
-├── 📂 backend           # API, Modelos e Lógica de Negócio
-│   ├── 📂 models       # SQLModel Tables e Schemas
-│   ├── 📂 auth         # Lógica de JWT e Criptografia
-│   └── main.py         # Entrypoint do Servidor Uvicorn
-├── 📂 frontend          # Interface do Usuário
-│   └── app.py          # Aplicação Streamlit e Service Layer
-└── database.db         # Banco de Dados SQLite (gerado automaticamente)
-
-🔧 Como Executar
-
-1. Clonar o repositório
-
-git clone
- [https://github.com/edaquinogit](https://github.com/edaquinogit/gerenciador-tarefas-api)
-
-cd SEU_REPOSITORIO
-
-Configurar o ambiente
-
+```bash
 python -m venv .venv
+```
 
-source .venv/bin/activate  # Linux/Mac
-.venv\Scripts\activate     # Windows
+Ative o ambiente:
 
-pip install -r requirements.txt
+- Windows PowerShell: `.venv\Scripts\Activate.ps1`
+- Windows CMD: `.venv\Scripts\activate.bat`
+- Linux/macOS: `source .venv/bin/activate`
 
-3. Rodar o Backend
+```bash
+python -m pip install -r requirements-dev.txt
+python -c "from pathlib import Path; import secrets; p=Path('.env'); p.exists() or p.write_text(Path('.env.example').read_text().replace('SECRET_KEY=', 'SECRET_KEY='+secrets.token_urlsafe(48), 1))"
+```
 
+O comando de configuração não sobrescreve um `.env` existente. Nesse caso, revise o arquivo e gere uma nova `SECRET_KEY` com `python -c "import secrets; print(secrets.token_urlsafe(48))"`. A aplicação exige chave com pelo menos 32 caracteres e não possui segredo padrão. Uma troca de chave invalida tokens anteriores.
 
-$env:PYTHONPATH = "."
+### Banco novo
 
-python -m uvicorn backend.main:app --reload
+```bash
+python -m alembic upgrade head
+python -m backend.scripts.criar_usuario --username ednaldo --email ednaldo@example.com
+```
 
-4. Rodar o Frontend
+O cadastro solicita senha e confirmação no terminal, sem expor a senha no comando. Ele cria um **usuário comum**. Não há conta ou senha administrativa fixa.
 
-streamlit run frontend/app.py
+**Banco com dados existentes:** siga primeiro [o procedimento de migração](docs/migracao.md). Não rode a criação inicial sobre tabelas legadas e não exclua o banco para resolver erros.
 
-📈 Próximas Evoluções (Roadmap)
-[ ] Implementar filtros de tarefas por prioridade e status.
+### API e interface
 
-[ ] Adicionar campo de data limite (deadline) com notificações.
+Terminal 1:
 
-[ ] Realizar deploy automatizado no Render (Backend) e Streamlit Cloud (Frontend).
+```bash
+python -m uvicorn backend.main:create_app --factory --reload
+```
 
-[ ] Implementar testes unitários com Pytest.
+Terminal 2, também com o ambiente virtual ativado e na raiz:
 
-✒️ Autor
-Ednaldo - Desenvolvedor em evolução -
-www.linkedin.com/in/ednaldo-aquino-6536892b5
+```bash
+python -m streamlit run frontend/app.py
+```
+
+- Interface: http://localhost:8501
+- Documentação da API: http://localhost:8000/docs
+- Verificação do processo: http://localhost:8000/health (não verifica conectividade com o banco)
+
+A interface usa `API_URL` do ambiente ou do `.env`; em deploy Streamlit, configure essa variável no servidor da interface. Não depende de `secrets.toml` nesta etapa.
+
+## Configuração
+
+| Variável | Uso |
+|---|---|
+| `SECRET_KEY` | Segredo JWT obrigatório, mínimo 32 caracteres |
+| `DATABASE_URL` | Padrão `sqlite:///database.db`, relativo à raiz de execução |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Validade positiva do token; padrão 60 minutos |
+| `ALLOW_REGISTRATION` | Padrão `false`; cadastro público pela API só para desenvolvimento quando habilitado |
+| `CORS_ORIGINS` | Lista JSON de origens permitidas; vazia por padrão |
+| `API_URL` | URL da API vista pelo processo Streamlit |
+
+O Streamlit se comunica com a API no servidor. CORS não é necessário para essa comunicação. Para outro cliente web, declare apenas as origens utilizadas.
+
+O `.env` anteriormente versionado foi retirado desta branch, mas permanece no histórico do Git. Substitua qualquer segredo real que tenha sido usado nele. O executável `ngrok.exe` também foi removido; a execução local não depende dele.
+
+## Organização
+
+| Diretório | Responsabilidade |
+|---|---|
+| `backend/api/` | Rotas e contratos HTTP |
+| `backend/models/` | Definição única das tabelas |
+| `backend/schemas/` | Dados de entrada e saída, sem expor hashes |
+| `backend/services/` | Operações de usuários e tarefas |
+| `backend/core/` | Configuração e autenticação |
+| `backend/database/` | Conexão e sessão por requisição |
+| `backend/scripts/` | Cadastro local e adoção do banco legado |
+| `frontend/` | Interface Streamlit e cliente HTTP |
+| `migrations/` | Evolução versionada do banco |
+| `tests/` | API, interface, configuração e migrações |
+
+O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt.
+
+## Contratos HTTP
+
+| Método e caminho | Comportamento |
+|---|---|
+| `POST /token` | Login por formulário; retorna JWT |
+| `GET /usuarios/me` | Dados públicos do usuário conectado |
+| `POST /usuarios` | Cadastro se habilitado; 201 ao criar, 409 em duplicidade |
+| `GET /tarefas` | Lista somente tarefas do usuário conectado |
+| `POST /tarefas` | Cria tarefa; retorna 201 |
+| `PATCH /tarefas/{id}/concluir` | Define concluído como verdadeiro; repetir não reabre |
+| `DELETE /tarefas/{id}` | Exclui tarefa pessoal; UI solicita confirmação |
+
+Título deve conter de 1 a 200 caracteres; prioridades aceitas: `Baixa`, `Média`, `Alta`. Cliente não pode atribuir `usuario_id` ou `concluido` durante a criação. Registros existentes mantêm seus valores. Antes das ordens de produção, a exclusão será substituída por cancelamento com histórico.
+
+## Validação
+
+```bash
+python -m pip check
+python -m ruff check .
+python -m ruff format --check .
+python -m pytest -q
+```
+
+Os testes utilizam banco isolado em memória ou arquivos temporários. Não usam o banco configurado pelo usuário. A CI executa os mesmos comandos em Python 3.11 e 3.12.
+
+As dependências diretas estão fixadas por ambiente; as transitivas ainda são resolvidas pelo pip. SQLite é a base validada nesta etapa. PostgreSQL, backup operacional e implantação compartilhada serão tratados antes do piloto; não são declarados como validados aqui.
