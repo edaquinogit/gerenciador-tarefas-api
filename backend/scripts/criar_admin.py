@@ -1,4 +1,4 @@
-"""Cadastro local de funcionário; prefira o painel administrativo no uso diário."""
+"""Cria o primeiro administrador localmente, sem senha fixa ou promoção automática."""
 
 import argparse
 from getpass import getpass
@@ -10,18 +10,15 @@ from sqlmodel import Session
 from backend.core.config import get_settings
 from backend.database.connection import build_engine
 from backend.schemas.usuario import UsuarioCreate
-from backend.services.usuarios import criar_usuario
+from backend.services.usuarios import criar_primeiro_admin
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--username", required=True)
     parser.add_argument("--email", required=True)
-    parser.add_argument(
-        "--setor", choices=["SOLICITACAO", "PRODUCAO", "COLETA_EMBALAGEM"], required=True
-    )
     args = parser.parse_args()
-    password = getpass("Senha (mínimo 8 caracteres): ")
+    password = getpass("Senha do administrador (mínimo 8 caracteres): ")
     if password != getpass("Confirme a senha: "):
         raise SystemExit("Senhas diferentes")
     try:
@@ -33,8 +30,10 @@ def main():
     engine = build_engine(get_settings().DATABASE_URL)
     try:
         with Session(engine) as session:
-            user = criar_usuario(session, data, setor=args.setor)
-            print(f"Funcionário {user.username} criado no setor {args.setor}.")
+            user = criar_primeiro_admin(session, data)
+            print(
+                f"Administrador {user.username} criado. Entre no painel para cadastrar funcionários."
+            )
     except HTTPException as error:
         raise SystemExit(error.detail) from None
     finally:

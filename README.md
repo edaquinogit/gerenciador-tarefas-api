@@ -2,9 +2,9 @@
 
 Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. Esta etapa organiza a base existente para a futura operação de solicitação, corte, costura e coleta.
 
-**Disponível agora:** autenticação JWT, contas individuais, tarefas pessoais com prioridade, conclusão idempotente, migrações e testes automatizados. Usuários inativos não conseguem entrar nem reutilizar tokens.
+**Disponível agora:** administrador e funcionários, setores, cadastro e gestão de funcionários, troca de senhas, autenticação JWT, tarefas pessoais, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações de conta ou senha revogam sessões anteriores.
 
-**Ainda não implementado:** perfis administrador/funcionário, setores, ordens compartilhadas, etapas de produção e notificações. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o plano de evolução](docs/plano-producao.md).
+**Ainda não implementado:** ordens compartilhadas, etapas de produção, notificações e coleta. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o plano de evolução](docs/plano-producao.md).
 
 ## Executar localmente
 
@@ -31,10 +31,12 @@ O comando de configuração não sobrescreve um `.env` existente. Nesse caso, re
 
 ```bash
 python -m alembic upgrade head
-python -m backend.scripts.criar_usuario --username ednaldo --email ednaldo@example.com
+python -m backend.scripts.criar_admin --username patrao --email patrao@example.com
 ```
 
-O cadastro solicita senha e confirmação no terminal, sem expor a senha no comando. Ele cria um **usuário comum**. Não há conta ou senha administrativa fixa.
+O comando cria o **primeiro administrador**, solicita senha e confirmação no terminal e recusa execução quando já existe um administrador. Execute uma única instância com a API parada. Não há senha fixa nem promoção automática de uma conta antiga com nome `admin`. Se o nome/e-mail já existir, use outro cadastro para o administrador.
+
+Entre no Streamlit e abra **Funcionários e setores** para cadastrar funcionários, atribuir setor, ativar/desativar e redefinir senhas. Veja [o guia de acessos](docs/acessos.md).
 
 **Banco com dados existentes:** siga primeiro [o procedimento de migração](docs/migracao.md). Não rode a criação inicial sobre tabelas legadas e não exclua o banco para resolver erros.
 
@@ -88,7 +90,7 @@ O `.env` anteriormente versionado foi retirado desta branch, mas permanece no hi
 | `migrations/` | Evolução versionada do banco |
 | `tests/` | API, interface, configuração e migrações |
 
-O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt.
+O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt. A migração `0002` acrescenta perfil, setor e versão de sessão.
 
 ## Contratos HTTP
 
@@ -96,7 +98,12 @@ O banco não é recriado no início da API. Migrações são executadas explicit
 |---|---|
 | `POST /token` | Login por formulário; retorna JWT |
 | `GET /usuarios/me` | Dados públicos do usuário conectado |
-| `POST /usuarios` | Cadastro se habilitado; 201 ao criar, 409 em duplicidade |
+| `POST /usuarios` | Cadastro de desenvolvimento, se habilitado; sempre funcionário sem setor |
+| `GET /setores` | Catálogo fixo de setores, exige login |
+| `GET/POST /admin/funcionarios` | Listar/criar funcionários, somente administrador |
+| `PATCH /admin/funcionarios/{id}` | Definir setor e ativação, somente administrador |
+| `POST /admin/funcionarios/{id}/senha` | Redefinir senha de funcionário, somente administrador |
+| `POST /usuarios/me/senha` | Alterar a própria senha, exigindo a senha atual |
 | `GET /tarefas` | Lista somente tarefas do usuário conectado |
 | `POST /tarefas` | Cria tarefa; retorna 201 |
 | `PATCH /tarefas/{id}/concluir` | Define concluído como verdadeiro; repetir não reabre |

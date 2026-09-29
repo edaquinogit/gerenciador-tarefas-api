@@ -37,10 +37,11 @@ def authenticate_user(session: Session, username: str, password: str) -> Usuario
     return user if user and user.is_active and valid else None
 
 
-def create_access_token(username: str, settings: Settings) -> str:
+def create_access_token(username: str, settings: Settings, token_version: int = 0) -> str:
     return jwt.encode(
         {
             "sub": username,
+            "ver": token_version,
             "exp": datetime.now(timezone.utc)
             + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         },
@@ -71,6 +72,17 @@ def get_current_user(
     except JWTError:
         raise error from None
     user = session.exec(select(Usuario).where(Usuario.username == username)).first()
-    if not user or not user.is_active:
+    if (
+        not user
+        or not user.is_active
+        or type(payload.get("ver")) is not int
+        or payload["ver"] != user.token_version
+    ):
         raise error
+    return user
+
+
+def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
+    if user.perfil != "ADMIN":
+        raise HTTPException(403, "Somente o administrador pode gerenciar funcionários")
     return user
