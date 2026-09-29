@@ -49,6 +49,6 @@ Para manutenção local, há também cadastro de funcionário por terminal:
 python -m backend.scripts.criar_usuario --username operador --email operador@example.com --setor PRODUCAO
 ```
 
-## Limite desta entrega
+## Ordens compartilhadas
 
-As telas ainda trabalham com tarefas pessoais. O setor já está cadastrado e visível, mas não transforma tarefas em uma fila compartilhada. A próxima fase adicionará ordens e autorizará solicitação, corte/costura e coleta conforme o setor.
+Os setores agora controlam as operações de ordens: solicitação cria; produção avança as etapas; coleta confirma retirada. Todos consultam a fila e o histórico, e o administrador pode executar todas as operações e cancelar com justificativa. Veja [o guia de ordens](ordens.md). Tarefas pessoais antigas permanecem separadas.

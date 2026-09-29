@@ -2,9 +2,9 @@
 
 Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. Esta etapa organiza a base existente para a futura operação de solicitação, corte, costura e coleta.
 
-**Disponível agora:** administrador e funcionários, setores, cadastro e gestão de funcionários, troca de senhas, autenticação JWT, tarefas pessoais, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações de conta ou senha revogam sessões anteriores.
+**Disponível agora:** administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações de conta ou senha revogam sessões anteriores.
 
-**Ainda não implementado:** ordens compartilhadas, etapas de produção, notificações e coleta. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o plano de evolução](docs/plano-producao.md).
+**Ainda não implementado:** notificações automáticas, atualização periódica da fila, lotes parciais e edição/reabertura de ordens. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md) e [o plano de evolução](docs/plano-producao.md).
 
 ## Executar localmente
 
@@ -90,7 +90,7 @@ O `.env` anteriormente versionado foi retirado desta branch, mas permanece no hi
 | `migrations/` | Evolução versionada do banco |
 | `tests/` | API, interface, configuração e migrações |
 
-O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt. A migração `0002` acrescenta perfil, setor e versão de sessão.
+O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt. A migração `0002` acrescenta perfil, setor e versão de sessão; `0003` cria ordens e histórico.
 
 ## Contratos HTTP
 
@@ -109,7 +109,7 @@ O banco não é recriado no início da API. Migrações são executadas explicit
 | `PATCH /tarefas/{id}/concluir` | Define concluído como verdadeiro; repetir não reabre |
 | `DELETE /tarefas/{id}` | Exclui tarefa pessoal; UI solicita confirmação |
 
-Título deve conter de 1 a 200 caracteres; prioridades aceitas: `Baixa`, `Média`, `Alta`. Cliente não pode atribuir `usuario_id` ou `concluido` durante a criação. Registros existentes mantêm seus valores. Antes das ordens de produção, a exclusão será substituída por cancelamento com histórico.
+Título deve conter de 1 a 200 caracteres; prioridades aceitas: `Baixa`, `Média`, `Alta`. Cliente não pode atribuir `usuario_id` ou `concluido` durante a criação. Registros existentes mantêm seus valores. A exclusão continua restrita às tarefas pessoais. Ordens de produção usam cancelamento com histórico.
 
 ## Validação
 

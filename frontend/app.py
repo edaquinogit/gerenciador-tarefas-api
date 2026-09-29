@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from frontend.services.task_service import APIError, TaskService
 from frontend.views.admin import render_admin
 from frontend.views.conta import render_conta
+from frontend.views.ordens import render_ordens
 
 load_dotenv()
 service = TaskService(os.getenv("API_URL", "http://127.0.0.1:8000"))
@@ -59,6 +60,8 @@ with st.sidebar:
     if user["perfil"] == "FUNCIONARIO":
         st.caption(f"Setor: {nomes.get(user['setor'], 'Aguardando definição')}")
     options = ["Minhas tarefas", "Minha conta"]
+    if user["perfil"] == "ADMIN" or user["setor"] in nomes:
+        options.insert(0, "Ordens de produção")
     if user["perfil"] == "ADMIN":
         options.insert(0, "Funcionários e setores")
     page = st.radio("Menu", options)
@@ -66,6 +69,9 @@ with st.sidebar:
         st.session_state.clear()
         st.rerun()
 
+if page == "Ordens de produção":
+    render_ordens(service, token, user, report_error)
+    st.stop()
 if page == "Funcionários e setores":
     render_admin(service, token, report_error)
     st.stop()
