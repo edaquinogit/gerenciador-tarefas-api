@@ -4,11 +4,12 @@ Objetivo: ensaiar um lote fictício completo com uma pessoa na solicitação, um
 
 ## Preparação no computador que hospedará o teste
 
-Use Python 3.11 ou 3.12, preferencialmente Windows nativo se os outros computadores forem Windows. A branch `feat/telefone-painel-adm` já contém as etapas anteriores; não é necessário mesclar os PRs para testar. Em um clone do projeto, sem alterações locais pendentes:
+Use Python 3.11 ou 3.12, preferencialmente Windows nativo se os outros computadores forem Windows. A branch `main` reúne as etapas de base, acessos, ordens, avisos, ensaio e painel administrativo. Em um clone do projeto, sem alterações locais pendentes:
 
 ```bash
 git fetch origin
-git switch feat/telefone-painel-adm
+git switch main
+git pull --ff-only origin main
 python -m venv .venv
 ```
 

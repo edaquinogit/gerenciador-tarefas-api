@@ -71,7 +71,7 @@ Pare a API, faça backup e execute `python -m alembic upgrade head` e `python -m
 
 Para sua instalação que já mostra `0004 (head)`, **não execute novamente criar_admin** e não apague o banco. Antes de atualizar, pare API e Streamlit, faça o backup descrito acima e preserve a revisão anterior do código. Aplique e teste primeiro em uma cópia.
 
-Depois de obter a branch `feat/telefone-painel-adm`, com ambiente virtual ativado e na raiz do projeto:
+Depois de atualizar a branch `main` (`git switch main` e `git pull --ff-only origin main`), com ambiente virtual ativado e na raiz do projeto:
 
 ```bash
 python -m alembic upgrade head

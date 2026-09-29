@@ -1,6 +1,6 @@
 # Gerenciador de tarefas — base para controle de produção
 
-Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. Esta etapa organiza a base existente para a futura operação de solicitação, corte, costura e coleta.
+Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. O sistema conecta solicitação, corte, costura e coleta, com acompanhamento administrativo e um ambiente separado para ensaios.
 
 **Disponível agora:** cadastro por telefone com DDD, painel global do administrador com atualização a cada 10 segundos, administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações administrativas de conta e trocas de senha revogam sessões anteriores; atualizar o próprio telefone mantém a sessão.
 
@@ -8,7 +8,7 @@ Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. Esta etapa org
 
 ## Ensaio entre setores
 
-Para testar com quatro contas, banco separado e inicialização em um único terminal, siga [o roteiro prático](docs/piloto.md). A branch `feat/telefone-painel-adm` reúne as etapas anteriores para esse ensaio.
+Para testar com quatro contas, banco separado e inicialização em um único terminal, siga [o roteiro prático](docs/piloto.md). A branch `main` reúne as etapas anteriores para esse ensaio.
 
 ## Atualização de uma instalação existente
 
