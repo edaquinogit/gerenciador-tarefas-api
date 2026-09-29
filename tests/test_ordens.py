@@ -38,6 +38,8 @@ def test_shared_full_cycle_with_history_and_collection(client, setores):
     ordem = nova(client, setores["SOLICITACAO"])
     ident = ordem["id"]
     assert ordem["solicitante_nome"] == "solicitacao"
+    assert ordem["categoria"] == "OUTROS"
+    assert ordem["status"] == "PENDENTE"
     assert ordem["prazo"] == "2026-10-01T20:00:00Z"
     for headers in setores.values():
         assert client.get("/ordens", headers=headers).json()[0]["id"] == ident
@@ -179,10 +181,30 @@ def test_cancel_preserves_history_and_prevents_changes(client, setores):
         {"solicitante_id": 999},
         {"status": "PRONTO"},
         {"prioridade": "Alta"},
+        {"categoria": "BANHO"},
     ],
 )
 def test_invalid_order_input(client, admin_headers, changes):
     assert client.post("/ordens", headers=admin_headers, json=payload(**changes)).status_code == 422
+
+
+def test_automatic_category_on_create_and_list(client, setores):
+    ordem = client.post(
+        "/ordens",
+        headers=setores["SOLICITACAO"],
+        json=payload(produto="Lençol casal", especificacao="Branco 2,00x1,80"),
+    ).json()
+    assert ordem["categoria"] == "ROUPA_DE_CAMA"
+    assert ordem["status"] == "PENDENTE"
+    listed = client.get("/ordens", headers=setores["PRODUCAO"]).json()
+    assert listed[0]["id"] == ordem["id"]
+    assert listed[0]["categoria"] == "ROUPA_DE_CAMA"
+    banho = client.post(
+        "/ordens",
+        headers=setores["SOLICITACAO"],
+        json=payload(produto="Kit premium", especificacao="Toalha de banho branca"),
+    ).json()
+    assert banho["categoria"] == "BANHO"
 
 
 def test_shared_filters_pagination_and_priority(client, admin_headers):

@@ -171,6 +171,8 @@ def test_v5_preserves_all_data_and_legacy_login(tmp_path):
             after = dict(conn.execute(text(f"SELECT * FROM {table}")).mappings().one())
             if table == "usuario":
                 assert after.pop("telefone") is None
+            elif table == "ordem":
+                assert after.pop("categoria") == "OUTROS"
             assert after == before[table]
         assert not conn.exec_driver_sql("PRAGMA foreign_key_check").all()
         assert conn.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1

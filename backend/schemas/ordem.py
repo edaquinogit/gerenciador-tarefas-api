@@ -50,6 +50,7 @@ class OrdemRead(BaseModel):
     prioridade: str
     prazo: datetime
     observacao: str
+    categoria: str
     status: StatusOrdem
     solicitante_id: int
     solicitante_nome: str

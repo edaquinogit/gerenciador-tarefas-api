@@ -18,6 +18,7 @@ class Ordem(SQLModel, table=True):
     prioridade: str
     prazo: datetime
     observacao: str
+    categoria: str = Field(default="OUTROS", index=True)
     status: str = Field(default="PENDENTE", index=True)
     solicitante_id: int = Field(foreign_key="usuario.id")
     responsavel_id: int | None = Field(default=None, foreign_key="usuario.id")
