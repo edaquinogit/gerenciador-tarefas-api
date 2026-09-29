@@ -7,7 +7,7 @@
 3. **Solicitação/coleta:** quando consultar a fila, uma ordem pronta aparece com destaque de produto disponível. O setor de coleta abre por padrão o filtro **Pronto**.
 4. **Coleta e embalagem:** confirme que retirou todo o lote e clique em **Confirmar coleta**. A ordem sai das ativas e continua acessível no filtro **Coletadas**.
 
-**Atualização é manual nesta versão:** clique em **Atualizar fila**. Os outros computadores não recebem aviso automático nem notificação com a tela fechada. Central de notificações persistentes e atualização periódica são a próxima etapa.
+**A fila é atualizada manualmente** pelo botão **Atualizar fila**. A central de avisos já recebe automaticamente os produtos prontos, consultando a API a cada 10 segundos com a sessão ativa, sem recarregar formulários. Os avisos persistem para o próximo login; não há push com a tela fechada. Consulte [o guia de avisos](avisos.md).
 
 Cada ordem representa um lote inteiro, em peças ou kits. Não há liberação parcial. O horário é mostrado no fuso da Bahia e armazenado em UTC.
 

@@ -2,9 +2,9 @@
 
 Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. Esta etapa organiza a base existente para a futura operação de solicitação, corte, costura e coleta.
 
-**Disponível agora:** administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações de conta ou senha revogam sessões anteriores.
+**Disponível agora:** administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações de conta ou senha revogam sessões anteriores.
 
-**Ainda não implementado:** notificações automáticas, atualização periódica da fila, lotes parciais e edição/reabertura de ordens. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md) e [o plano de evolução](docs/plano-producao.md).
+**Ainda não implementado:** avisos externos (WhatsApp/e-mail/push), atualização periódica da fila de ordens, lotes parciais e edição/reabertura de ordens. A central de avisos já se atualiza a cada 10 segundos com sessão ativa. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md), [os avisos](docs/avisos.md) e [o plano de evolução](docs/plano-producao.md).
 
 ## Executar localmente
 
@@ -90,7 +90,7 @@ O `.env` anteriormente versionado foi retirado desta branch, mas permanece no hi
 | `migrations/` | Evolução versionada do banco |
 | `tests/` | API, interface, configuração e migrações |
 
-O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt. A migração `0002` acrescenta perfil, setor e versão de sessão; `0003` cria ordens e histórico.
+O banco não é recriado no início da API. Migrações são executadas explicitamente. O schema desta fase preserva os campos existentes, incluindo `concluido`, IDs e hashes bcrypt. A migração `0002` acrescenta perfil, setor e versão de sessão; `0003` cria ordens e histórico; `0004` acrescenta avisos persistentes.
 
 ## Contratos HTTP
 
