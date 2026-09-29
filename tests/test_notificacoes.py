@@ -28,7 +28,7 @@ def test_ready_notifies_requester_admin_and_collection_once(client, setores, use
         headers=setores["ADMIN"],
         json={
             "username": "inativo",
-            "email": "inativo@example.com",
+            "telefone": "79999990001",
             "password": "senha-inativo-123",
             "setor": "COLETA_EMBALAGEM",
         },

@@ -7,6 +7,7 @@ from backend.models import Usuario
 from backend.schemas.usuario import (
     FuncionarioCreate,
     FuncionarioUpdate,
+    MeuTelefoneUpdate,
     MinhaSenhaUpdate,
     SenhaUpdate,
     UsuarioRead,
@@ -70,3 +71,12 @@ def minha_senha(
 ):
     usuarios.alterar_minha_senha(session, user, data.current_password, data.password)
     return {"message": "Senha alterada. Entre novamente."}
+
+
+@router.patch("/usuarios/me/telefone", response_model=UsuarioRead)
+def meu_telefone(
+    data: MeuTelefoneUpdate,
+    session: Session = Depends(get_session),
+    user: Usuario = Depends(get_current_user),
+):
+    return usuarios.atualizar_meu_telefone(session, user, data.telefone)

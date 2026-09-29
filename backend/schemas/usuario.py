@@ -1,6 +1,10 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+
+from shared.telefone import normalizar_telefone
+
+Telefone = Annotated[str, Field(max_length=32), AfterValidator(normalizar_telefone)]
 
 Setor = Literal["SOLICITACAO", "PRODUCAO", "COLETA_EMBALAGEM"]
 Perfil = Literal["ADMIN", "FUNCIONARIO"]
@@ -9,7 +13,7 @@ Perfil = Literal["ADMIN", "FUNCIONARIO"]
 class UsuarioCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Field(min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_.-]+$")
-    email: str = Field(min_length=3, max_length=254)
+    telefone: Telefone
     password: str = Field(min_length=8)
 
     @field_validator("password")
@@ -19,20 +23,12 @@ class UsuarioCreate(BaseModel):
             raise ValueError("Senha deve ter no máximo 72 bytes em UTF-8")
         return value
 
-    @field_validator("email")
-    @classmethod
-    def basic_email(cls, value: str) -> str:
-        value = value.strip().lower()
-        if value.count("@") != 1 or not all(value.split("@")):
-            raise ValueError("E-mail inválido")
-        return value
-
 
 class UsuarioRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     username: str
-    email: str
+    telefone: str | None
     is_active: bool
     perfil: Perfil
     setor: Setor | None
@@ -51,6 +47,19 @@ class FuncionarioUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     setor: Setor
     is_active: bool
+    telefone: Telefone | None = None
+
+    @field_validator("telefone")
+    @classmethod
+    def telefone_informado(cls, value):
+        if value is None:
+            raise ValueError("Informe o telefone ou omita o campo para mantê-lo")
+        return value
+
+
+class MeuTelefoneUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    telefone: Telefone
 
 
 class SenhaUpdate(BaseModel):

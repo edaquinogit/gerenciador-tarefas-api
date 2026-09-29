@@ -29,7 +29,7 @@ def user_factory(client):
             "/usuarios",
             json={
                 "username": username,
-                "email": f"{username}@example.com",
+                "telefone": "79999990001",
                 "password": "senha-segura-123",
             },
         )
@@ -52,9 +52,7 @@ def admin_headers(client):
     with Session(client.app.state.engine) as session:
         criar_primeiro_admin(
             session,
-            UsuarioCreate(
-                username="patrao", email="patrao@example.com", password="senha-admin-123"
-            ),
+            UsuarioCreate(username="patrao", telefone="79999990001", password="senha-admin-123"),
         )
     token = client.post(
         "/token", data={"username": "patrao", "password": "senha-admin-123"}
@@ -73,7 +71,7 @@ def setores(client, admin_headers):
                 headers=admin_headers,
                 json={
                     "username": name,
-                    "email": f"{name}@example.com",
+                    "telefone": "79999990001",
                     "password": "senha-setor-123",
                     "setor": setor,
                 },
