@@ -5,16 +5,13 @@ import streamlit as st
 from backend.services.classificador_produtos import ORDEM_CATEGORIAS, rotulo_categoria
 from frontend.services.task_service import APIError
 from frontend.views.ordens import ETAPAS, FUSO, horario
+from frontend.views.paginacao import carregar_pagina, render_paginacao, reset_page
 
 SETORES = {
     "SOLICITACAO": "Solicitação",
     "PRODUCAO": "Produção",
     "COLETA_EMBALAGEM": "Coleta e embalagem",
 }
-
-
-def reset_page(key):
-    st.session_state[key] = 1
 
 
 @st.fragment(run_every="10s")
@@ -26,7 +23,8 @@ def render_painel(service, token, report_error):
     st.button("Atualizar agora", key="painel_atualizar")
     orders_tab, tasks_tab = st.tabs(["Ordens entre setores", "Tarefas pessoais"])
     with orders_tab:
-        etapa = st.selectbox(
+        filtros = st.columns(3)
+        etapa = filtros[0].selectbox(
             "Etapa da produção",
             ["TODAS", *ETAPAS],
             format_func=lambda v: ETAPAS.get(v, "Todas"),
@@ -34,7 +32,7 @@ def render_painel(service, token, report_error):
             on_change=reset_page,
             args=("painel_ordens_pagina",),
         )
-        situacao = st.selectbox(
+        situacao = filtros[1].selectbox(
             "Situação das ordens",
             ["todas", "ativas", "coletadas", "canceladas"],
             format_func=lambda v: {
@@ -47,10 +45,7 @@ def render_painel(service, token, report_error):
             on_change=reset_page,
             args=("painel_ordens_pagina",),
         )
-        page = int(
-            st.number_input("Página de ordens", min_value=1, step=1, key="painel_ordens_pagina")
-        )
-        categoria = st.selectbox(
+        categoria = filtros[2].selectbox(
             "Categoria das ordens",
             ["TODAS", *ORDEM_CATEGORIAS],
             format_func=lambda v: "Todas" if v == "TODAS" else rotulo_categoria(v),
@@ -58,13 +53,19 @@ def render_painel(service, token, report_error):
             on_change=reset_page,
             args=("painel_ordens_pagina",),
         )
-        params = {"situacao": situacao, "offset": (page - 1) * 20, "limit": 21}
+        params = {"situacao": situacao}
         if categoria != "TODAS":
             params["categoria"] = categoria
         if etapa != "TODAS":
             params["status"] = etapa
         try:
-            orders = service.ordens(token, **params)
+            result, page, pages = carregar_pagina(
+                lambda **kwargs: service.pagina_ordens(token, **kwargs),
+                "painel_ordens_pagina",
+                **params,
+            )
+            orders = result["itens"]
+            render_paginacao("painel_ordens_pagina", page, pages, result["total"])
             if orders:
                 st.dataframe(
                     [
@@ -88,18 +89,13 @@ def render_painel(service, token, report_error):
                             "Prazo": horario(order["prazo"]),
                             "Atualizada em": horario(order["atualizado_em"]),
                         }
-                        for order in orders[:20]
+                        for order in orders
                     ],
                     hide_index=True,
                     width="stretch",
                 )
-                st.caption(
-                    "Há mais ordens na próxima página."
-                    if len(orders) > 20
-                    else "Última página deste filtro."
-                )
             else:
-                st.info("Nenhuma ordem nesta página. Confira os filtros e o número da página.")
+                st.info("Nenhuma ordem encontrada para os filtros selecionados.")
             st.caption(f"Ordens consultadas às {datetime.now(FUSO):%H:%M:%S} (Bahia).")
         except APIError as error:
             report_error(error)
@@ -111,15 +107,16 @@ def render_painel(service, token, report_error):
             on_change=reset_page,
             args=("painel_tarefas_pagina",),
         )
-        page = int(
-            st.number_input("Página de tarefas", min_value=1, step=1, key="painel_tarefas_pagina")
-        )
-        params = {"offset": (page - 1) * 20, "limit": 20}
+        params = {}
         if estado != "Todas":
             params["concluido"] = estado == "Concluídas"
         try:
-            result = service.todas_tarefas(token, **params)
-            st.caption(f"{result['total']} tarefa(s) no filtro • página {page}.")
+            result, page, pages = carregar_pagina(
+                lambda **kwargs: service.todas_tarefas(token, **kwargs),
+                "painel_tarefas_pagina",
+                **params,
+            )
+            render_paginacao("painel_tarefas_pagina", page, pages, result["total"])
             if result["itens"]:
                 st.dataframe(
                     [
@@ -137,7 +134,7 @@ def render_painel(service, token, report_error):
                     width="stretch",
                 )
             else:
-                st.info("Nenhuma tarefa nesta página. Confira os filtros e o número da página.")
+                st.info("Nenhuma tarefa encontrada para os filtros selecionados.")
             st.caption(f"Tarefas consultadas às {datetime.now(FUSO):%H:%M:%S} (Bahia).")
         except APIError as error:
             report_error(error)

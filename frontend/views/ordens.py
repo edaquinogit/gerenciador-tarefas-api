@@ -10,6 +10,7 @@ from backend.services.classificador_produtos import (
     rotulo_categoria,
 )
 from frontend.services.task_service import APIError
+from frontend.views.paginacao import carregar_pagina, render_paginacao
 
 FUSO = ZoneInfo("America/Bahia")
 ETAPAS = {
@@ -237,24 +238,33 @@ def render_ordens(service, token, user, report_error):
         format_func=lambda v: "Todas" if v == "TODAS" else rotulo_categoria(v),
         on_change=reset_pagina_ordens,
     )
-    pagina = st.number_input("Página", min_value=1, step=1, key="ordens_pagina")
-    params = {"situacao": situacao, "offset": (pagina - 1) * 20, "limit": 20}
+    params = {"situacao": situacao}
     if categoria_filtro != "TODAS":
         params["categoria"] = categoria_filtro
     if status != "TODAS":
         params["status"] = status
     try:
-        ordens = service.ordens(token, **params)
+        resultado, pagina, paginas = carregar_pagina(
+            lambda **kwargs: service.pagina_ordens(token, **kwargs), "ordens_pagina", **params
+        )
+        ordens = resultado["itens"]
     except APIError as error:
         report_error(error)
         return
+    render_paginacao("ordens_pagina", pagina, paginas, resultado["total"])
     if not ordens:
-        st.info("Nenhuma ordem nesta página e filtro.")
+        st.info("Nenhuma ordem encontrada para os filtros selecionados.")
         st.caption(
-            "Até 20 ordens por página. Grupos e contagens desta página; urgentes primeiro dentro de cada grupo, depois pelo prazo."
+            "Até 20 ordens por página. Urgentes no topo, em ordem de prazo; demais ordens por categoria. Contagens dos grupos referem-se apenas a esta página."
         )
         return
-    for codigo, itens in agrupar_por_categoria(ordens):
+    urgentes = [ordem for ordem in ordens if ordem["prioridade"] == "URGENTE"]
+    if urgentes:
+        st.subheader(f"Urgentes — {len(urgentes)} nesta página")
+        for ordem in urgentes:
+            render_ordem(service, token, user, report_error, ordem, admin, setor)
+    normais = [ordem for ordem in ordens if ordem["prioridade"] != "URGENTE"]
+    for codigo, itens in agrupar_por_categoria(normais):
         quantidade = len(itens)
         rotulo = rotulo_categoria(codigo)
         titulo = f"{rotulo} — {quantidade} {'ordem' if quantidade == 1 else 'ordens'}"
@@ -262,5 +272,5 @@ def render_ordens(service, token, user, report_error):
         for ordem in itens:
             render_ordem(service, token, user, report_error, ordem, admin, setor)
     st.caption(
-        "Até 20 ordens por página. Grupos e contagens desta página; urgentes primeiro dentro de cada grupo, depois pelo prazo."
+        "Até 20 ordens por página. Urgentes no topo, em ordem de prazo; demais ordens por categoria. Contagens dos grupos referem-se apenas a esta página."
     )

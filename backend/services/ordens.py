@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select, update
 
@@ -68,16 +69,7 @@ def criar(session: Session, data: OrdemCreate, user: Usuario) -> Ordem:
     return ordem
 
 
-def listar(
-    session: Session,
-    user: Usuario,
-    status: str | None,
-    situacao: str,
-    offset: int,
-    limit: int,
-    categoria: str | None = None,
-):
-    permitir(user)
+def consulta_filtrada(status, situacao, categoria=None):
     query = select(Ordem)
     if categoria:
         query = query.where(Ordem.categoria == categoria)
@@ -89,12 +81,24 @@ def listar(
         query = query.where(Ordem.coletado_em.is_not(None))
     elif situacao == "canceladas":
         query = query.where(Ordem.cancelado_em.is_not(None))
+    return query
+
+
+def listar(session, user, status, situacao, offset, limit, categoria=None):
+    permitir(user)
+    query = consulta_filtrada(status, situacao, categoria)
     query = (
         query.order_by((Ordem.prioridade == "URGENTE").desc(), Ordem.prazo, Ordem.id)
         .offset(offset)
         .limit(limit)
     )
     return list(session.exec(query).all())
+
+
+def contar(session, user, status, situacao, categoria=None):
+    permitir(user)
+    query = consulta_filtrada(status, situacao, categoria)
+    return session.exec(select(func.count()).select_from(query.subquery())).one()
 
 
 def executar(

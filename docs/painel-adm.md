@@ -5,9 +5,11 @@ Após entrar como administrador, clique no botão **Todas as tarefas**, no topo 
 - **Ordens entre setores:** todas as situações por padrão, produto, quantidade, etapa, solicitante, último responsável, prioridade, prazo e atualização. Filtros por etapa e situação incluem ativas, coletadas e canceladas.
 - **Tarefas pessoais:** tarefas de todas as contas, inclusive do próprio administrador e de funcionários inativos, com pessoa, setor atual, prioridade e conclusão. Filtro por pendentes/concluídas.
 
-Cada página mostra até 20 registros. Mude o número da página para consultar os demais. Trocar filtros volta à primeira página. Registros não são carregados todos de uma vez. Ordens seguem a ordenação operacional por prioridade e prazo; tarefas pessoais aparecem por ID decrescente.
+Cada página mostra até 20 registros. Use Anterior e Próxima para consultar os demais. A navegação mostra Página X de Y, total de registros no filtro e intervalo exibido. Os botões ficam desativados nos limites. Se os resultados diminuírem, a página é ajustada automaticamente e os dados são consultados novamente. Trocar filtros volta à primeira página. Registros não são carregados todos de uma vez. Ordens seguem a ordenação operacional por prioridade e prazo; tarefas pessoais aparecem por ID decrescente.
 
 O painel consulta a API a cada **10 segundos enquanto está aberto**, além do botão Atualizar agora. Exibe o horário de cada consulta bem-sucedida no fuso da Bahia. Não usa WebSocket nem garante atualização instantânea: abas suspensas e problemas de rede podem atrasar a consulta. Em falha, mostra erro; não informa que a fila está vazia. O temporizador só reexecuta o painel, sem reenviar formulários de cadastro ou mudança de etapa.
+
+O administrador usa layout amplo, com filtros de ordens lado a lado e tabelas ocupando a largura disponível. Muitas colunas ainda podem exigir rolagem horizontal em telas pequenas.
 
 Esta tela serve para acompanhamento. Para avançar/cancelar/coletar ordens, use Ordens de produção. A consulta global não concede permissão para editar ou excluir tarefas pessoais de terceiros; essas ações continuam com o dono da tarefa. A tela Minhas tarefas informa que o administrador pode acompanhá-las.
 

@@ -6,7 +6,7 @@ Aceita acentos, maiúsculas, hífen e variações previstas como lençóis, cobr
 
 Pedidos de cobre-leito abertos pela manhã e à tarde entram no grupo Roupa de cama, mas **não são unidos**: cada ordem mantém quantidade, responsável, prazo, status, histórico e aviso próprios. O agrupamento é por categoria, não por produto idêntico ou dia.
 
-A tela de produção agrupa as ordens da página atual. Os títulos mostram quantas ordens existem naquela página, não o total de toda a fábrica. São até 20 ordens por página; há prioridade e prazo dentro dos grupos. O filtro por categoria é aplicado no banco antes da paginação e volta à página 1 quando alterado. O painel Todas as tarefas também oferece filtro e coluna de categoria para ordens.
+A tela de produção agrupa as ordens da página atual. Os títulos mostram quantas ordens existem naquela página, não o total de toda a fábrica. São até 20 ordens por página. Todas as urgentes carregadas aparecem primeiro em uma seção única, por prazo, independentemente da categoria. As demais ordens são agrupadas por categoria. A navegação usa Anterior/Próxima, informa total e número de páginas e ajusta páginas que deixarem de existir. O filtro por categoria é aplicado no banco antes da paginação e volta à página 1 quando alterado. O painel Todas as tarefas também oferece filtro e coluna de categoria para ordens.
 
 ## Atualização 0006
 
