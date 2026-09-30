@@ -9,6 +9,7 @@ from backend.models import Usuario
 from backend.models.ordem import EventoOrdem
 from backend.schemas.ordem import (
     Cancelamento,
+    CategoriaOrdem,
     ComandoOrdem,
     EtapaUpdate,
     EventoRead,
@@ -33,6 +34,7 @@ def criar(
 @router.get("", response_model=list[OrdemRead])
 def listar(
     status: StatusOrdem | None = None,
+    categoria: CategoriaOrdem | None = None,
     situacao: Literal["ativas", "coletadas", "canceladas", "todas"] = "ativas",
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -41,7 +43,7 @@ def listar(
 ):
     return [
         ordens.apresentar(session, item)
-        for item in ordens.listar(session, user, status, situacao, offset, limit)
+        for item in ordens.listar(session, user, status, situacao, offset, limit, categoria)
     ]
 
 

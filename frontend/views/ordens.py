@@ -141,6 +141,10 @@ def render_ordem(service, token, user, report_error, ordem, admin, setor):
                 report_error(error)
 
 
+def reset_pagina_ordens():
+    st.session_state["ordens_pagina"] = 1
+
+
 def render_ordens(service, token, user, report_error):
     st.title("Ordens de produção")
     admin = user["perfil"] == "ADMIN"
@@ -219,17 +223,24 @@ def render_ordens(service, token, user, report_error):
         ["TODAS", *ETAPAS],
         index=4 if setor == "COLETA_EMBALAGEM" else 0,
         format_func=lambda v: ETAPAS.get(v, "Todas"),
+        on_change=reset_pagina_ordens,
     )
     situacao = st.selectbox(
-        "Situação", ["ativas", "coletadas", "canceladas", "todas"], format_func=str.title
+        "Situação",
+        ["ativas", "coletadas", "canceladas", "todas"],
+        format_func=str.title,
+        on_change=reset_pagina_ordens,
     )
     categoria_filtro = st.selectbox(
         "Categoria",
         ["TODAS", *ORDEM_CATEGORIAS],
         format_func=lambda v: "Todas" if v == "TODAS" else rotulo_categoria(v),
+        on_change=reset_pagina_ordens,
     )
-    pagina = st.number_input("Página", min_value=1, value=1, step=1)
+    pagina = st.number_input("Página", min_value=1, step=1, key="ordens_pagina")
     params = {"situacao": situacao, "offset": (pagina - 1) * 20, "limit": 20}
+    if categoria_filtro != "TODAS":
+        params["categoria"] = categoria_filtro
     if status != "TODAS":
         params["status"] = status
     try:
@@ -238,15 +249,11 @@ def render_ordens(service, token, user, report_error):
         report_error(error)
         return
     if not ordens:
-        st.info("Nenhuma ordem de produção encontrada.")
-        st.caption("Até 20 ordens por página, urgentes primeiro e depois pelo prazo.")
+        st.info("Nenhuma ordem nesta página e filtro.")
+        st.caption(
+            "Até 20 ordens por página. Grupos e contagens desta página; urgentes primeiro dentro de cada grupo, depois pelo prazo."
+        )
         return
-    if categoria_filtro != "TODAS":
-        ordens = [ordem for ordem in ordens if _categoria_ordem(ordem) == categoria_filtro]
-        if not ordens:
-            st.info("Nenhuma ordem encontrada nesta categoria.")
-            st.caption("Até 20 ordens por página, urgentes primeiro e depois pelo prazo.")
-            return
     for codigo, itens in agrupar_por_categoria(ordens):
         quantidade = len(itens)
         rotulo = rotulo_categoria(codigo)
@@ -254,4 +261,6 @@ def render_ordens(service, token, user, report_error):
         st.subheader(titulo)
         for ordem in itens:
             render_ordem(service, token, user, report_error, ordem, admin, setor)
-    st.caption("Até 20 ordens por página, urgentes primeiro e depois pelo prazo.")
+    st.caption(
+        "Até 20 ordens por página. Grupos e contagens desta página; urgentes primeiro dentro de cada grupo, depois pelo prazo."
+    )

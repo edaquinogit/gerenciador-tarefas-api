@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+CategoriaOrdem = Literal["ROUPA_DE_CAMA", "BANHO", "COZINHA", "CORTINA", "ALMOFADA", "OUTROS"]
+
 StatusOrdem = Literal["PENDENTE", "CORTANDO", "COSTURANDO", "PRONTO"]
 
 
@@ -50,7 +52,7 @@ class OrdemRead(BaseModel):
     prioridade: str
     prazo: datetime
     observacao: str
-    categoria: str
+    categoria: CategoriaOrdem
     status: StatusOrdem
     solicitante_id: int
     solicitante_nome: str

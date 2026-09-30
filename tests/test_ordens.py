@@ -234,3 +234,39 @@ def test_reusing_event_key_on_creation_rolls_back(client, admin_headers):
         == 409
     )
     assert len(client.get("/ordens", headers=admin_headers).json()) == 1
+
+
+def test_category_filter_runs_before_pagination(client, admin_headers):
+    for index in range(21):
+        assert (
+            client.post(
+                "/ordens", headers=admin_headers, json=payload(produto=f"Lençol {index}")
+            ).status_code
+            == 201
+        )
+    first = client.post(
+        "/ordens", headers=admin_headers, json=payload(produto="Toalha manhã")
+    ).json()
+    second = client.post(
+        "/ordens", headers=admin_headers, json=payload(produto="Toalha tarde")
+    ).json()
+    # Pedidos separados compartilham a categoria, nunca o ID ou o histórico.
+    assert first["id"] != second["id"]
+    response = client.get(
+        "/ordens", headers=admin_headers, params={"categoria": "BANHO", "limit": 1}
+    )
+    assert response.status_code == 200 and response.json()[0]["id"] == first["id"]
+    next_page = client.get(
+        "/ordens", headers=admin_headers, params={"categoria": "BANHO", "offset": 1, "limit": 1}
+    )
+    assert next_page.json()[0]["id"] == second["id"]
+    assert (
+        client.get("/ordens", headers=admin_headers, params={"categoria": "INVALIDA"}).status_code
+        == 422
+    )
+    assert (
+        client.get(
+            "/ordens", headers=admin_headers, params={"categoria": "BANHO", "status": "CORTANDO"}
+        ).json()
+        == []
+    )

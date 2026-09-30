@@ -45,3 +45,20 @@ def test_ordem_visual_e_rotulos():
     assert rotulo_categoria("CORTINA") == "Cortinas"
     assert rotulo_categoria("ALMOFADA") == "Almofadas"
     assert rotulo_categoria("desconhecida") == "Outros"
+
+
+@pytest.mark.parametrize(
+    "produto,especificacao,observacao,esperado",
+    [
+        ("Cobre-leito casal", "", "", "ROUPA_DE_CAMA"),
+        ("Cobreleito", "", "", "ROUPA_DE_CAMA"),
+        ("Lençóis", "", "", "ROUPA_DE_CAMA"),
+        ("Toalhas de banho", "", "", "BANHO"),
+        ("Toalha de mesa", "", "", "COZINHA"),
+        ("Cortinas", "", "", "CORTINA"),
+        ("Cortina", "", "Entregar junto com lençol", "CORTINA"),
+        ("Produto avulso", "composição especial", "", "OUTROS"),
+    ],
+)
+def test_variations_and_product_name_precedence(produto, especificacao, observacao, esperado):
+    assert classificar_produto(produto, especificacao, observacao) == esperado

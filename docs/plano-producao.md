@@ -40,3 +40,8 @@ Estoque completo, financeiro, etiquetas, integrações com marketplaces e mensag
 ## Próximo passo de aceite
 
 Atualizar a instalação para 0005 com backup, completar telefone do administrador e cadastrar um funcionário de cada setor. Executar o roteiro docs/piloto.md com dados fictícios, verificar o painel administrativo durante mudanças feitas por outra pessoa e registrar falhas/tempos observados. Só depois desse aceite avançar para a preparação operacional; a passagem dos testes automatizados não substitui o teste na empresa.
+
+
+## Categorias — implementado
+
+Classificação automática, agrupamento visual e filtro antes da paginação; pedidos continuam independentes. Migração 0006 mantém ordens existentes em Outros. Incluído backup SQLite consistente com teste de restauração. O aceite presencial, a política de cópias externas e a hospedagem operacional seguem pendentes. Consulte docs/categorias.md.

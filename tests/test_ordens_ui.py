@@ -72,3 +72,19 @@ def test_ui_groups_by_category_preserves_urgent_order(monkeypatch, client, setor
     assert not app.exception
     assert [e.value for e in app.subheader] == ["Banho — 1 ordem"]
     assert any(button.label == "Iniciar corte" for button in app.button)
+
+
+def test_category_filter_finds_orders_beyond_first_page(monkeypatch, client, setores):
+    for index in range(21):
+        client.post(
+            "/ordens", headers=setores["SOLICITACAO"], json=payload(produto=f"Lençol {index}")
+        )
+    client.post("/ordens", headers=setores["SOLICITACAO"], json=payload(produto="Toalha final"))
+    app = app_with_api(monkeypatch, client)
+    enter(app, "producao")
+    labeled(app.number_input, "Página").set_value(2).run()
+    labeled(app.selectbox, "Categoria").select("BANHO").run()
+    assert not app.exception and not app.error
+    assert labeled(app.number_input, "Página").value == 1
+    assert [e.value for e in app.subheader] == ["Banho — 1 ordem"]
+    assert any("Toalha final" in e.value for e in app.markdown)

@@ -69,10 +69,18 @@ def criar(session: Session, data: OrdemCreate, user: Usuario) -> Ordem:
 
 
 def listar(
-    session: Session, user: Usuario, status: str | None, situacao: str, offset: int, limit: int
+    session: Session,
+    user: Usuario,
+    status: str | None,
+    situacao: str,
+    offset: int,
+    limit: int,
+    categoria: str | None = None,
 ):
     permitir(user)
     query = select(Ordem)
+    if categoria:
+        query = query.where(Ordem.categoria == categoria)
     if status:
         query = query.where(Ordem.status == status)
     if situacao == "ativas":

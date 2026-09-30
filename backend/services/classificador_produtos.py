@@ -29,13 +29,21 @@ ROTULOS_CATEGORIA: dict[str, str] = {
 _PALAVRAS_CHAVE: dict[str, tuple[str, ...]] = {
     "ROUPA_DE_CAMA": (
         "cobre leito",
+        "cobre leitos",
+        "cobreleito",
+        "cobreleitos",
         "lencol",
+        "lencois",
         "fronha",
+        "fronhas",
         "colcha",
+        "colchas",
         "edredom",
+        "edredons",
     ),
     "BANHO": (
         "toalha",
+        "toalhas",
         "banho",
         "rosto",
         "piso",
@@ -43,17 +51,21 @@ _PALAVRAS_CHAVE: dict[str, tuple[str, ...]] = {
     "COZINHA": (
         "pano de prato",
         "guardanapo",
+        "guardanapos",
         "cozinha",
         "avental",
+        "aventais",
     ),
     "CORTINA": (
         "blackout",
         "cortina",
+        "cortinas",
         "voil",
     ),
     "ALMOFADA": (
         "capa de almofada",
         "almofada",
+        "almofadas",
     ),
 }
 
@@ -61,6 +73,7 @@ _PALAVRAS_CHAVE: dict[str, tuple[str, ...]] = {
 def normalizar_texto(texto: str) -> str:
     texto = unicodedata.normalize("NFD", texto.lower())
     texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    texto = re.sub(r"[^a-z0-9]+", " ", texto)
     return re.sub(r"\s+", " ", texto).strip()
 
 
@@ -73,13 +86,18 @@ def classificar_produto(
     especificacao: str = "",
     observacao: str = "",
 ) -> str:
-    texto = normalizar_texto(f"{produto} {especificacao} {observacao}")
-    if not texto:
-        return CATEGORIA_OUTROS
-    for categoria in ORDEM_CATEGORIAS:
-        if categoria == CATEGORIA_OUTROS:
+    # O nome do produto tem prioridade sobre detalhes e observações.
+    for campo in (produto, especificacao, observacao):
+        texto = normalizar_texto(campo)
+        if not texto:
             continue
-        for palavra in _PALAVRAS_CHAVE[categoria]:
-            if palavra in texto:
-                return categoria
+        # A expressão específica evita confundir mesa com toalhas de banho.
+        if re.search(r"\btoalhas? de mesa\b", texto):
+            return "COZINHA"
+        for categoria in ORDEM_CATEGORIAS:
+            if categoria == CATEGORIA_OUTROS:
+                continue
+            for palavra in _PALAVRAS_CHAVE[categoria]:
+                if re.search(r"\b" + re.escape(palavra) + r"\b", texto):
+                    return categoria
     return CATEGORIA_OUTROS

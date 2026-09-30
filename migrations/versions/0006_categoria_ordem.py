@@ -24,6 +24,4 @@ def upgrade():
 
 
 def downgrade():
-    with op.batch_alter_table("ordem") as batch:
-        batch.drop_index(op.f("ix_ordem_categoria"))
-        batch.drop_column("categoria")
+    raise RuntimeError("Categorias operacionais não devem ser apagadas. Restaure backup validado.")
