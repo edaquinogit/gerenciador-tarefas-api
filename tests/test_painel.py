@@ -68,9 +68,9 @@ def test_header_opens_panel_and_refresh_sees_other_sector_changes(monkeypatch, c
     labeled(app.selectbox, "Etapa da produção").select("CORTANDO").run()
     assert not app.error and len(app.dataframe[0].value) == 1
     # A troca de filtro volta à primeira página para não esconder resultados.
-    labeled(app.number_input, "Página de tarefas").set_value(2).run()
+    app.session_state["painel_tarefas_pagina"] = 2
     labeled(app.selectbox, "Situação das tarefas").select("Concluídas").run()
-    assert labeled(app.number_input, "Página de tarefas").value == 1
+    assert app.session_state["painel_tarefas_pagina"] == 1
     assert len(app.dataframe[1].value) == 1
     monkeypatch.setattr(
         TaskService, "todas_tarefas", Mock(side_effect=APIError("Falha ao consultar tarefas"))

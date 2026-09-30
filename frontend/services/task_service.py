@@ -123,3 +123,6 @@ class TaskService:
 
     def todas_tarefas(self, token: str, **params):
         return self._request("GET", "/admin/tarefas", token, params=params)
+
+    def pagina_ordens(self, token: str, **params):
+        return self._request("GET", "/ordens/pagina", token, params=params)

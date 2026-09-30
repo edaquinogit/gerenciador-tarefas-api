@@ -60,6 +60,7 @@ except APIError as error:
     st.stop()
 
 if user["perfil"] == "ADMIN":
+    st.set_page_config(layout="wide")
     if st.button("Todas as tarefas", key="abrir_painel", type="primary"):
         st.session_state["pagina_principal"] = "Todas as tarefas"
 

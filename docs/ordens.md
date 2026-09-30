@@ -61,3 +61,10 @@ python -m alembic check
 ```
 
 A migração `0003` cria `ordem` e `eventoordem`, sem modificar os registros de usuários ou tarefas. Inicie a API e o Streamlit conforme o README. Valide primeiro com contas de teste de cada setor. Não houve validação de PostgreSQL ou implantação real nesta etapa.
+
+
+## Navegação da fila
+
+A tela operacional e o painel administrativo usam Anterior/Próxima com até 20 registros, Página X de Y e total filtrado. Ao mudar filtros, voltam à primeira página; se coleta/cancelamento reduzir a lista, ajustam a página e consultam novamente. Na produção, urgentes de qualquer categoria aparecem antes das normais. Os grupos normais e suas contagens continuam relativos à página exibida.
+
+A interface utiliza `GET /ordens/pagina`, que retorna `{total, itens}` com os mesmos filtros e permissões. `GET /ordens` mantém o retorno em lista para compatibilidade. Esta correção não exige migração: o schema continua em 0006. Atualize e reinicie API e Streamlit juntos. A paginação por posição pode mudar quando outras pessoas alteram a fila; o painel é uma consulta atual, não uma fotografia imutável dos registros.

@@ -96,3 +96,8 @@ class EventoRead(BaseModel):
     @classmethod
     def aware_utc(cls, value: datetime):
         return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+class PaginaOrdens(BaseModel):
+    total: int
+    itens: list[OrdemRead]

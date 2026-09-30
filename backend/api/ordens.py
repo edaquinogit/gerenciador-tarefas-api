@@ -15,6 +15,7 @@ from backend.schemas.ordem import (
     EventoRead,
     OrdemCreate,
     OrdemRead,
+    PaginaOrdens,
     StatusOrdem,
 )
 from backend.services import ordens
@@ -45,6 +46,26 @@ def listar(
         ordens.apresentar(session, item)
         for item in ordens.listar(session, user, status, situacao, offset, limit, categoria)
     ]
+
+
+@router.get("/pagina", response_model=PaginaOrdens)
+def pagina(
+    status: StatusOrdem | None = None,
+    categoria: CategoriaOrdem | None = None,
+    situacao: Literal["ativas", "coletadas", "canceladas", "todas"] = "ativas",
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    session: Session = Depends(get_session),
+    user: Usuario = Depends(get_current_user),
+):
+    total = ordens.contar(session, user, status, situacao, categoria)
+    return {
+        "total": total,
+        "itens": [
+            ordens.apresentar(session, item)
+            for item in ordens.listar(session, user, status, situacao, offset, limit, categoria)
+        ],
+    }
 
 
 @router.get("/{ident}", response_model=OrdemRead)
