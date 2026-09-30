@@ -5,6 +5,7 @@ from sqlmodel import Session, select, update
 from backend.models import Usuario
 from backend.models.ordem import EventoOrdem, Ordem, now_utc
 from backend.schemas.ordem import ComandoOrdem, OrdemCreate
+from backend.services.classificador_produtos import classificar_produto
 from backend.services.notificacoes import gerar_produto_pronto
 
 SETORES = {"SOLICITACAO", "PRODUCAO", "COLETA_EMBALAGEM"}
@@ -29,6 +30,7 @@ def criar(session: Session, data: OrdemCreate, user: Usuario) -> Ordem:
     permitir(user, "SOLICITACAO")
     values = data.model_dump(exclude={"request_id"})
     request_id = str(data.request_id)
+    categoria = classificar_produto(data.produto, data.especificacao, data.observacao)
 
     def existente():
         ordem = session.exec(select(Ordem).where(Ordem.request_id == request_id)).first()
@@ -41,7 +43,7 @@ def criar(session: Session, data: OrdemCreate, user: Usuario) -> Ordem:
 
     if ordem := existente():
         return ordem
-    ordem = Ordem(**values, request_id=request_id, solicitante_id=user.id)
+    ordem = Ordem(**values, request_id=request_id, solicitante_id=user.id, categoria=categoria)
     try:
         session.add(ordem)
         session.flush()
@@ -67,10 +69,18 @@ def criar(session: Session, data: OrdemCreate, user: Usuario) -> Ordem:
 
 
 def listar(
-    session: Session, user: Usuario, status: str | None, situacao: str, offset: int, limit: int
+    session: Session,
+    user: Usuario,
+    status: str | None,
+    situacao: str,
+    offset: int,
+    limit: int,
+    categoria: str | None = None,
 ):
     permitir(user)
     query = select(Ordem)
+    if categoria:
+        query = query.where(Ordem.categoria == categoria)
     if status:
         query = query.where(Ordem.status == status)
     if situacao == "ativas":

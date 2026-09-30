@@ -2,6 +2,7 @@ from datetime import datetime
 
 import streamlit as st
 
+from backend.services.classificador_produtos import ORDEM_CATEGORIAS, rotulo_categoria
 from frontend.services.task_service import APIError
 from frontend.views.ordens import ETAPAS, FUSO, horario
 
@@ -49,7 +50,17 @@ def render_painel(service, token, report_error):
         page = int(
             st.number_input("Página de ordens", min_value=1, step=1, key="painel_ordens_pagina")
         )
+        categoria = st.selectbox(
+            "Categoria das ordens",
+            ["TODAS", *ORDEM_CATEGORIAS],
+            format_func=lambda v: "Todas" if v == "TODAS" else rotulo_categoria(v),
+            key="painel_categoria",
+            on_change=reset_page,
+            args=("painel_ordens_pagina",),
+        )
         params = {"situacao": situacao, "offset": (page - 1) * 20, "limit": 21}
+        if categoria != "TODAS":
+            params["categoria"] = categoria
         if etapa != "TODAS":
             params["status"] = etapa
         try:
@@ -60,6 +71,7 @@ def render_painel(service, token, report_error):
                         {
                             "Ordem": order["id"],
                             "Produto": order["produto"],
+                            "Categoria": rotulo_categoria(order["categoria"]),
                             "Quantidade": order["quantidade"],
                             "Unidade": order["unidade"],
                             "Etapa": ETAPAS[order["status"]],

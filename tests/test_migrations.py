@@ -171,6 +171,8 @@ def test_v5_preserves_all_data_and_legacy_login(tmp_path):
             after = dict(conn.execute(text(f"SELECT * FROM {table}")).mappings().one())
             if table == "usuario":
                 assert after.pop("telefone") is None
+            elif table == "ordem":
+                assert after.pop("categoria") == "OUTROS"
             assert after == before[table]
         assert not conn.exec_driver_sql("PRAGMA foreign_key_check").all()
         assert conn.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1
@@ -223,3 +225,29 @@ def test_invalid_references_rollback_v5_including_schema(tmp_path):
     assert "telefone" not in {column["name"] for column in inspect(engine).get_columns("usuario")}
     assert "_alembic_tmp_usuario" not in inspect(engine).get_table_names()
     engine.dispose()
+
+
+def test_v6_preserves_orders_history_and_notifications(tmp_path):
+    url = f"sqlite:///{tmp_path / 'v5-to-v6.db'}"
+    seed_v4(url)
+    result = run("-m", "alembic", "upgrade", "0005", url=url)
+    assert result.returncode == 0, result.stderr
+    engine = build_engine(url)
+    tables = ("usuario", "tarefa", "ordem", "eventoordem", "notificacao")
+    with engine.connect() as conn:
+        before = {
+            t: dict(conn.execute(text(f"SELECT * FROM {t}")).mappings().one()) for t in tables
+        }
+    result = run("-m", "alembic", "upgrade", "head", url=url)
+    assert result.returncode == 0, result.stderr
+    with engine.connect() as conn:
+        for table in tables:
+            after = dict(conn.execute(text(f"SELECT * FROM {table}")).mappings().one())
+            if table == "ordem":
+                assert after.pop("categoria") == "OUTROS"
+            assert after == before[table]
+        assert not conn.exec_driver_sql("PRAGMA foreign_key_check").all()
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0006"
+    engine.dispose()
+    assert run("-m", "alembic", "check", url=url).returncode == 0
+    assert run("-m", "alembic", "downgrade", "0005", url=url).returncode != 0

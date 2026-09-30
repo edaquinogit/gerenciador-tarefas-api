@@ -2,13 +2,15 @@
 
 Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. O sistema conecta solicitação, corte, costura e coleta, com acompanhamento administrativo e um ambiente separado para ensaios.
 
-**Disponível agora:** cadastro por telefone com DDD, painel global do administrador com atualização a cada 10 segundos, administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações administrativas de conta e trocas de senha revogam sessões anteriores; atualizar o próprio telefone mantém a sessão.
+**Disponível agora:** classificação e agrupamento de ordens por categoria, cadastro por telefone com DDD, painel global do administrador com atualização a cada 10 segundos, administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações administrativas de conta e trocas de senha revogam sessões anteriores; atualizar o próprio telefone mantém a sessão.
 
 **Ainda não implementado:** avisos externos (WhatsApp/e-mail/push), atualização periódica da tela operacional de ordens, lotes parciais e edição/reabertura de ordens. O painel **Todas as tarefas** do administrador e a central de avisos se atualizam a cada 10 segundos com sessão ativa. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md), [os avisos](docs/avisos.md) e [o plano de evolução](docs/plano-producao.md).
 
 ## Ensaio entre setores
 
 Para testar com quatro contas, banco separado e inicialização em um único terminal, siga [o roteiro prático](docs/piloto.md). A branch `main` reúne as etapas anteriores para esse ensaio.
+
+Veja [categorias e execução no VS Code](docs/categorias.md) para a migração `0006`, backup do SQLite e comandos Windows.
 
 ## Atualização de uma instalação existente
 
