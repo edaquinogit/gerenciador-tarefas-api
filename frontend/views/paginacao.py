@@ -39,7 +39,8 @@ def render_paginacao(key, pagina, paginas, total, tamanho=20):
     )
     inicio = (pagina - 1) * tamanho + 1 if total else 0
     fim = min(pagina * tamanho, total)
-    resumo.caption(f"Página {pagina} de {paginas} • {total} registros • exibindo {inicio}–{fim}")
+    rotulo = "registro" if total == 1 else "registros"
+    resumo.caption(f"Página {pagina} de {paginas} • {total} {rotulo} • exibindo {inicio}–{fim}")
     proxima.button(
         "Próxima",
         key=f"{key}_proxima",

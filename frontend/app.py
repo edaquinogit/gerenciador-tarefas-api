@@ -15,7 +15,7 @@ load_dotenv()
 service = TaskService(os.getenv("API_URL", "http://127.0.0.1:8000"))
 st.set_page_config(page_title="Gerenciador de Tarefas", page_icon="📋", layout="centered")
 st.html(
-    "<style>h1 {font-size:clamp(1.65rem,3vw,2.2rem); line-height:1.2;} h2 {font-size:1.5rem;} h3 {font-size:1.15rem;}</style>"
+    '<style>[data-testid="stMainBlockContainer"] {padding-top:2rem; padding-bottom:2rem;} h1 {font-size:clamp(1.65rem,3vw,2.2rem) !important; line-height:1.2 !important;} h2 {font-size:1.5rem !important;} h3 {font-size:1.15rem !important;}</style>'
 )
 
 
