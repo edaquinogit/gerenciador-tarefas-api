@@ -2,7 +2,7 @@
 
 Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. O sistema conecta solicitação, corte, costura e coleta, com acompanhamento administrativo e um ambiente separado para ensaios.
 
-**Disponível agora:** classificação e agrupamento de ordens por categoria, cadastro por telefone com DDD, painel global do administrador com atualização a cada 10 segundos, administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações administrativas de conta e trocas de senha revogam sessões anteriores; atualizar o próprio telefone mantém a sessão.
+**Disponível agora:** sessão recuperável após F5, logout com revogação, restauração de navegação/rascunho de ordem, paginação limitada também nos avisos, tema visual unificado, classificação e agrupamento de ordens por categoria, cadastro por telefone com DDD, painel global do administrador com atualização a cada 10 segundos, administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações administrativas de conta e trocas de senha revogam sessões anteriores; atualizar o próprio telefone mantém a sessão.
 
 **Ainda não implementado:** avisos externos (WhatsApp/e-mail/push), atualização periódica da tela operacional de ordens, lotes parciais e edição/reabertura de ordens. O painel **Todas as tarefas** do administrador e a central de avisos se atualizam a cada 10 segundos com sessão ativa. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md), [os avisos](docs/avisos.md) e [o plano de evolução](docs/plano-producao.md).
 
@@ -10,11 +10,11 @@ Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. O sistema cone
 
 Para testar com quatro contas, banco separado e inicialização em um único terminal, siga [o roteiro prático](docs/piloto.md). A branch `main` reúne as etapas anteriores para esse ensaio.
 
-Veja [categorias e execução no VS Code](docs/categorias.md) para a migração `0006`, backup do SQLite e comandos Windows.
+Veja [sessões e experiência de uso](docs/sessoes-experiencia.md) para a migração **0007**, backup, configuração de rede e comandos Windows atualizados.
 
 ## Atualização de uma instalação existente
 
-A versão 2.5 substitui `email` por `telefone` nos cadastros e respostas da API. Com os serviços parados, faça backup e aplique a migração `0005` antes de reiniciar. Veja [a atualização para telefone](docs/migracao.md#upgrade-para-telefone-0005) e [o painel geral](docs/painel-adm.md). Não recrie o administrador existente.
+A versão 2.6 acrescenta sessões persistentes e exige a migração **0007**. Pare os serviços, faça backup, aplique `alembic upgrade head` e reinicie API e interface. Será necessário entrar novamente uma vez após a atualização. Não recrie o administrador existente. Siga [o passo a passo](docs/sessoes-experiencia.md).
 
 ## Executar localmente
 
@@ -76,7 +76,11 @@ A interface usa `API_URL` do ambiente ou do `.env`; em deploy Streamlit, configu
 |---|---|
 | `SECRET_KEY` | Segredo JWT obrigatório, mínimo 32 caracteres |
 | `DATABASE_URL` | Padrão `sqlite:///database.db`, relativo à raiz de execução |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Validade positiva do token; padrão 60 minutos |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Validade do JWT; padrão 60 minutos, com renovação dentro da sessão |
+| `SESSION_HOURS` | Prazo máximo da sessão; padrão 12 horas, limite 24 |
+| `SESSION_COOKIE_SECURE` | `true` em HTTPS; padrão `false` para ensaio local HTTP |
+| `BROWSER_ORIGINS` | Origens exatas da interface autorizadas a vincular e renovar sessão |
+| `PUBLIC_API_URL` | Endereço da API acessível no navegador; vazio usa mesmo host na porta 8000 |
 | `ALLOW_REGISTRATION` | Padrão `false`; cadastro público pela API só para desenvolvimento quando habilitado |
 | `CORS_ORIGINS` | Lista JSON de origens permitidas; vazia por padrão |
 | `API_URL` | URL da API vista pelo processo Streamlit |

@@ -4,6 +4,7 @@ import streamlit as st
 
 from backend.services.classificador_produtos import ORDEM_CATEGORIAS, rotulo_categoria
 from frontend.services.task_service import APIError
+from frontend.session import persist_state
 from frontend.views.ordens import ETAPAS, FUSO, horario
 from frontend.views.paginacao import carregar_pagina, render_paginacao, reset_page
 
@@ -141,3 +142,5 @@ def render_painel(service, token, report_error):
     st.caption(
         "Para atuar em uma ordem, abra Ordens de produção no menu. Tarefas pessoais são alteradas pelo próprio responsável."
     )
+
+    persist_state(service)

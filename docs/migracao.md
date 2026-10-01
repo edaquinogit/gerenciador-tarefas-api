@@ -86,3 +86,8 @@ A migração acrescenta telefone nulo às contas existentes e torna e-mail opcio
 O contrato de cadastro mudou: atualize clientes da API de `email` para `telefone`. Não execute interface antiga contra API nova nem o contrário. Não existe conversão de e-mail em telefone nem preenchimento fictício de contas reais.
 
 Para o ensaio `.pilot`, estes comandos comuns leem `.env` e **não devem ser usados para tentar atualizar seu banco de demonstração**. Preserve a pasta `.pilot` completa fora do repositório, com serviços parados, e prepare um novo ensaio pelo comando `piloto preparar`, conforme docs/piloto.md. Guarde a versão anterior junto dos dados se precisar retomar o ensaio antigo.
+
+
+## Upgrade para sessões (0007)
+
+Pare API e Streamlit, execute `python -m backend.scripts.backup_sqlite` e só prossiga após sucesso. Execute `python -m alembic upgrade head` e `python -m alembic check`. A migração cria `sessao`, preservando usuários, ordens, tarefas, histórico e avisos. Tokens antigos exigem novo login. Reinicie os dois serviços. Configuração do cookie, LAN/HTTPS e comandos completos em [sessões e experiência](sessoes-experiencia.md).

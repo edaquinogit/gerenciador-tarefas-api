@@ -45,3 +45,27 @@ def test_notice_outage_does_not_claim_empty_inbox(monkeypatch, client, setores):
     assert not app.exception
     assert any("Avisos indisponíveis" in e.value for e in app.error)
     assert not any("Avisos não lidos: 0" in e.value for e in app.caption)
+
+
+def test_last_notice_read_clamps_page_and_filter_resets(monkeypatch, client, setores):
+    for _ in range(11):
+        pronta(client, setores)
+    app = app_with_api(monkeypatch, client)
+    enter(app, "solicitacao")
+    assert app.button(key="avisos_pagina_anterior").disabled
+    app.button(key="avisos_pagina_proxima").click().run()
+    assert app.session_state["avisos_pagina"] == 2
+    assert app.button(key="avisos_pagina_proxima").disabled
+    labeled(app.button, "Marcar como lido").click().run()
+    assert not app.exception
+    assert app.session_state["avisos_pagina"] == 1
+    assert app.button(key="avisos_pagina_proxima").disabled
+    labeled(app.checkbox, "Incluir avisos lidos").check().run()
+    assert app.session_state["avisos_pagina"] == 1
+    assert not app.button(key="avisos_pagina_proxima").disabled
+    assert (
+        client.get(
+            "/notificacoes", headers=setores["SOLICITACAO"], params={"somente_nao_lidas": False}
+        ).json()["total"]
+        == 11
+    )

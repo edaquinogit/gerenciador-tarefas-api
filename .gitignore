@@ -17,3 +17,4 @@ htmlcov/
 
 # Contas, segredos e banco exclusivos do ensaio
 .pilot/
+test-results/

@@ -42,12 +42,12 @@ Os contatos das contas de demonstração são números fictícios usados somente
 Pare o comando anterior com Ctrl+C e inicie:
 
 ```bash
-python -m backend.scripts.piloto iniciar --rede
+python -m backend.scripts.piloto iniciar --rede --host-publico 192.168.1.20
 ```
 
-No Windows, use `ipconfig` para consultar o IPv4 do computador anfitrião. Os demais abrem `http://IP-DO-ANFITRIAO:8502`, por exemplo `http://192.168.1.20:8502`. Todos precisam estar na mesma rede local confiável. Se necessário, peça ao responsável pela rede liberação da porta TCP 8502 apenas na rede privada. Não abra portas no roteador nem publique este ensaio na internet: ele usa HTTP e dados fictícios.
+Substitua o IP de exemplo pelo IPv4 do anfitrião, consultado com `ipconfig` no Windows. Os demais abrem `http://IP-DO-ANFITRIAO:8502`, por exemplo `http://192.168.1.20:8502`. Todos precisam estar na mesma rede local confiável. Se necessário, peça ao responsável pela rede liberação das portas TCP 8502 e 8001 apenas na rede privada. Não abra portas no roteador nem publique este ensaio na internet: ele usa HTTP e dados fictícios.
 
-A API permanece em `127.0.0.1:8001`; os setores não precisam acessá-la diretamente. Apenas um computador executa o sistema e guarda o banco. Não coloque SQLite em pasta compartilhada de rede. Mantenha o anfitrião ligado, sem suspensão. No WSL, o acesso pela LAN depende da configuração de rede do Windows/WSL e não foi validado; prefira Python nativo para este roteiro.
+No modo `--rede`, a API também escuta a rede na porta 8001, pois o navegador precisa vincular/renovar o cookie. O IP informado é incluído na lista de origens permitidas. No modo local, os dois serviços permanecem no loopback. Apenas um computador executa o sistema e guarda o banco. Não coloque SQLite em pasta compartilhada de rede. Mantenha o anfitrião ligado, sem suspensão. No WSL, o acesso pela LAN depende da configuração de rede do Windows/WSL e não foi validado; prefira Python nativo para este roteiro.
 
 ## Roteiro de aceite
 
@@ -95,7 +95,7 @@ Ctrl+C encerra os dois processos e preserva os dados. Para retomar, execute some
 - **Preparação interrompida:** não reutilize pasta parcial; preserve/mova a pasta e repita após corrigir a dependência ou permissão apontada no terminal.
 - **Migração pendente ou banco incompatível:** o início verifica o schema e recusa continuar. Preserve a pasta e peça revisão; não aplique migrações no banco real para resolver o ensaio.
 - **Senha esquecida:** admin pode redefinir a senha do funcionário; `acessos.json` contém apenas as senhas iniciais. Se esquecer a senha administrativa, prepare um novo ensaio preservando o anterior.
-- **Sessão expirada:** entre novamente; os tokens duram 60 minutos.
+- **Sessão expirada:** entre novamente após o prazo máximo de 12 horas. Tokens curtos são renovados enquanto a sessão continua válida. F5 deve manter o login, conforme [o guia de sessões](sessoes-experiencia.md).
 - **Aviso não aparece:** mantenha aba ativa, atualize, confira destinatário/setor e se a etapa realmente ficou PRONTO. Avisos vão ao solicitante, administradores ativos e funcionários ativos de coleta existentes naquele momento.
 - **“Coletada” some da fila:** selecione a situação correspondente; ordens encerradas não aparecem no filtro de ativas.
 

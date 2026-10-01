@@ -52,9 +52,11 @@ def listar(session: Session, user: Usuario, somente_nao_lidas: bool, offset: int
     )
     if somente_nao_lidas:
         query = query.where(Notificacao.lida_em.is_(None))
+    filtrado = session.exec(select(func.count()).select_from(query.subquery())).one()
     rows = session.exec(query.order_by(Notificacao.id.desc()).offset(offset).limit(limit)).all()
     return {
         "nao_lidas": total,
+        "total": filtrado,
         "itens": [{**notice.model_dump(), "situacao": situacao(ordem)} for notice, ordem in rows],
     }
 

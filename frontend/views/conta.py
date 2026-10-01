@@ -1,6 +1,7 @@
 import streamlit as st
 
 from frontend.services.task_service import APIError
+from frontend.session import reset_local
 from shared.telefone import normalizar_telefone
 
 
@@ -34,8 +35,7 @@ def render_conta(service, token, user, report_error):
             else:
                 try:
                     service.minha_senha(current, password, token)
-                    st.session_state.clear()
-                    st.session_state.flash = "Senha alterada. Entre novamente."
+                    reset_local("Senha alterada. Entre novamente.")
                     st.rerun()
                 except APIError as error:
                     report_error(error)

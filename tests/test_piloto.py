@@ -97,3 +97,17 @@ def test_failed_setup_has_no_ready_marker(tmp_path, monkeypatch):
     with pytest.raises(subprocess.CalledProcessError):
         prepare(directory)
     assert not (directory / "config.json").exists()
+
+
+def test_pilot_browser_addresses_are_same_host_and_restricted(tmp_path):
+    local = environment(tmp_path, "test-only-secret")
+    assert local["PUBLIC_API_URL"] == ""
+    assert local["PUBLIC_API_PORT"] == "8001"
+    assert json.loads(local["BROWSER_ORIGINS"]) == [
+        "http://127.0.0.1:8502",
+        "http://localhost:8502",
+    ]
+    network = environment(tmp_path, "test-only-secret", "192.168.1.20")
+    assert "http://192.168.1.20:8502" in json.loads(network["BROWSER_ORIGINS"])
+    with pytest.raises(ValueError):
+        environment(tmp_path, "test-only-secret", "0.0.0.0")

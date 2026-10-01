@@ -1,6 +1,7 @@
 """Ambiente descartável para ensaio entre setores, sem usar o banco da empresa."""
 
 import argparse
+import ipaddress
 import json
 import os
 import secrets
@@ -22,7 +23,13 @@ ACCOUNTS = (
 )
 
 
-def environment(directory: Path, secret: str) -> dict[str, str]:
+def environment(directory: Path, secret: str, public_host: str | None = None) -> dict[str, str]:
+    origins = ["http://127.0.0.1:8502", "http://localhost:8502"]
+    if public_host:
+        address = ipaddress.IPv4Address(public_host)
+        if not address.is_private or address.is_loopback or address.is_unspecified:
+            raise ValueError("Use o IPv4 privado do computador na rede de ensaio")
+        origins.append(f"http://{address}:8502")
     return {
         **os.environ,
         "PYTHONPATH": str(ROOT),
@@ -33,6 +40,10 @@ def environment(directory: Path, secret: str) -> dict[str, str]:
         "ALLOW_REGISTRATION": "false",
         "CORS_ORIGINS": "[]",
         "API_URL": "http://127.0.0.1:8001",
+        "PUBLIC_API_URL": "",
+        "PUBLIC_API_PORT": "8001",
+        "BROWSER_ORIGINS": json.dumps(origins),
+        "SESSION_COOKIE_SECURE": "false",
         "PILOT_MODE": "true",
     }
 
@@ -94,13 +105,15 @@ def stop(processes):
                 process.wait()
 
 
-def start(network: bool = False, directory: Path = PILOT):
+def start(network: bool = False, directory: Path = PILOT, public_host: str | None = None):
     config = json.loads((directory / "config.json").read_text(encoding="utf-8"))
     if config.get("version") != 1 or len(config.get("secret", "")) < 32:
         raise ValueError("Configuração de ensaio inválida")
     if not (directory / "piloto.db").is_file():
         raise ValueError("Banco de ensaio ausente; restaure a pasta completa")
-    env = environment(directory, config["secret"])
+    if network and not public_host:
+        raise ValueError("Informe --host-publico com o IPv4 do servidor na rede")
+    env = environment(directory, config["secret"], public_host)
     # Recusa portas ocupadas em vez de conectar a outro sistema por engano.
     for port in (8001, 8502):
         with socket.socket() as sock:
@@ -117,7 +130,7 @@ def start(network: bool = False, directory: Path = PILOT):
                     "backend.main:create_app",
                     "--factory",
                     "--host",
-                    "127.0.0.1",
+                    "0.0.0.0" if network else "127.0.0.1",
                     "--port",
                     "8001",
                 ],
@@ -169,14 +182,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("acao", choices=("preparar", "iniciar"))
     parser.add_argument("--rede", action="store_true", help="Interface na rede local confiável")
+    parser.add_argument("--host-publico", help="IPv4 privado do servidor; obrigatório com --rede")
     args = parser.parse_args()
     try:
         if args.acao == "preparar":
-            if args.rede:
+            if args.rede or args.host_publico:
                 parser.error("--rede é usado somente com iniciar")
             prepare()
         else:
-            start(args.rede)
+            if args.rede and not args.host_publico:
+                parser.error("Use --rede --host-publico com o IPv4 do servidor na rede local")
+            start(args.rede, public_host=args.host_publico)
     except KeyboardInterrupt:
         print("Ensaio encerrado. Os dados ficam preservados em .pilot.")
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError):
