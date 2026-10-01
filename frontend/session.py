@@ -100,6 +100,7 @@ def sync_session(service):
         code=st.session_state.get("browser_code"),
         clear=st.session_state.get("clear_cookie"),
         force=st.session_state.get("restore_request"),
+        session_id=st.session_state.get("browser_session_id"),
     )
     if result and result.get("event") != st.session_state.get("bridge_event"):
         st.session_state["bridge_event"] = result.get("event")
@@ -122,6 +123,11 @@ def sync_session(service):
                 restore_state(result.get("state", {}))
                 st.session_state["ui_loaded"] = True
         elif status == "guest":
+            if result.get("claim_failed"):
+                st.session_state["session_error"] = (
+                    "Não foi possível manter este login após atualizar a página. Saia e entre novamente para recuperar a sessão persistente."
+                )
+                st.session_state.pop("browser_code", None)
             if st.session_state.get("awaiting_restore") or (
                 st.session_state.get("access_token") and st.session_state.get("session_expires")
             ):

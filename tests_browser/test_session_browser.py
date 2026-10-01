@@ -161,7 +161,6 @@ def test_f5_draft_logout_and_small_screen(live_app):
             expect(
                 page.get_by_label("Especificação (medida, cor ou tecido)", exact=True)
             ).to_have_value("Branca 70x140")
-            page.screenshot(path=str(OUTPUT / "desktop.png"), full_page=True)
             page.get_by_role("button", name="Enviar para produção", exact=True).click()
             expect(page.get_by_text("Ordem #1 enviada para produção", exact=False)).to_be_visible()
             page.reload()
@@ -169,10 +168,40 @@ def test_f5_draft_logout_and_small_screen(live_app):
                 page.get_by_role("heading", name="Ordens de produção", exact=True)
             ).to_be_visible()
             assert len(requests.get(API + "/ordens", headers=headers, timeout=5).json()) == 1
-            page.set_viewport_size({"width": 390, "height": 844})
-            page.screenshot(path=str(OUTPUT / "mobile.png"), full_page=True)
-            assert page.locator("body").evaluate("e => e.scrollWidth <= window.innerWidth + 1")
-            page.set_viewport_size({"width": 1440, "height": 1000})
+            expect(page.get_by_text("#1 — Toalha de ensaio", exact=True)).to_be_visible()
+            page.screenshot(path=str(OUTPUT / "desktop.png"), full_page=True, animations="disabled")
+            mobile_context = browser.new_context(
+                viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
+            )
+            mobile_context.add_cookies(context.cookies())
+            mobile = mobile_context.new_page()
+            mobile.goto(BASE)
+            expect(
+                mobile.get_by_role("heading", name="Ordens de produção", exact=True)
+            ).to_be_visible(timeout=20000)
+            expect(mobile.get_by_text("#1 — Toalha de ensaio", exact=True)).to_be_visible()
+            mobile.screenshot(
+                path=str(OUTPUT / "mobile.png"), full_page=True, animations="disabled"
+            )
+            assert mobile.locator("body").evaluate("e => e.scrollWidth <= window.innerWidth + 1")
+            mobile_context.close()
+            # JWT de 1 minuto: navegador deve renovar sem estender a sessão máxima.
+            for _ in range(75):
+                if (
+                    requests.get(API + "/usuarios/me", headers=headers, timeout=5).status_code
+                    == 401
+                ):
+                    break
+                time.sleep(1)
+            else:
+                pytest.fail("Token curto não expirou no período esperado")
+            page.get_by_role("button", name="Todas as tarefas", exact=True).click()
+            expect(page.get_by_role("heading", name="Todas as tarefas", exact=True)).to_be_visible()
+            renewed = context.request.post(
+                API + "/sessoes/restaurar", headers={"Origin": BASE, "X-Session-Request": "1"}
+            ).json()
+            assert renewed["expires_at"] == saved.json()["expires_at"]
+            headers = {"Authorization": f"Bearer {renewed['access_token']}"}
             page.get_by_role("button", name="Sair", exact=True).click()
             expect(page.get_by_role("button", name="Entrar", exact=True)).to_be_visible()
             assert requests.get(API + "/usuarios/me", headers=headers, timeout=5).status_code == 401

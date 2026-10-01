@@ -14,6 +14,9 @@ from frontend.views.painel import render_painel
 load_dotenv()
 service = TaskService(os.getenv("API_URL", "http://127.0.0.1:8000"))
 st.set_page_config(page_title="Gerenciador de Tarefas", page_icon="📋", layout="centered")
+st.html(
+    "<style>h1 {font-size:clamp(1.65rem,3vw,2.2rem); line-height:1.2;} h2 {font-size:1.5rem;} h3 {font-size:1.15rem;}</style>"
+)
 
 
 if os.getenv("PILOT_MODE") == "true":
@@ -53,6 +56,7 @@ def main():
                     st.session_state.access_token = result["access_token"]
                     st.session_state.username = username
                     st.session_state.browser_code = result.get("browser_code")
+                    st.session_state.browser_session_id = result.get("session_id")
                     st.rerun()
                 except APIError as error:
                     report_error(error)
@@ -62,6 +66,7 @@ def main():
     token = st.session_state.access_token
     try:
         user = service.me(token)
+        st.session_state["session_user"] = user["id"]
     except APIError as error:
         report_error(error)
         if st.button("Tentar novamente"):

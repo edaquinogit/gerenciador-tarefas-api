@@ -55,6 +55,7 @@ def validar(session, record):
 
 def apresentar(record, user, settings):
     return {
+        "session_id": record.id,
         "access_token": create_access_token(user.username, settings, user.token_version, record.id),
         "expires_at": record.expira_em.replace(tzinfo=timezone.utc).isoformat(),
         "refresh_seconds": min(300, max(5, settings.ACCESS_TOKEN_EXPIRE_MINUTES * 30)),

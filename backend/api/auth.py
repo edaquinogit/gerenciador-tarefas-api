@@ -26,6 +26,7 @@ def login(
     record, code = criar(session, user, request.app.state.settings)
     return Token(
         browser_code=code,
+        session_id=record.id,
         access_token=create_access_token(
             user.username, request.app.state.settings, user.token_version, record.id
         ),

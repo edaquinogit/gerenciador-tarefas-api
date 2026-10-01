@@ -41,6 +41,9 @@
           if (error.status === 403) throw error;
           data = await request("restaurar");
         }
+        if (data.session_id !== args.session_id) {
+          const mismatch = new Error("Vinculação não confirmada"); mismatch.status = 401; throw mismatch;
+        }
         initialized = true; authenticated(data);
       } else if (!initialized) {
         const data = await request("restaurar");
@@ -49,7 +52,7 @@
     } catch (error) {
       if (error.status === 401) {
         initialized = true; clearInterval(timer);
-        emit({status: "guest"});
+        emit({status: "guest", claim_failed: Boolean(args.code)});
       } else {
         emit({status: "error", forbidden: error.status === 403});
         retryTimer = setTimeout(() => { initialized = false; sync(); }, 15000);
