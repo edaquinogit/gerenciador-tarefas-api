@@ -6,6 +6,7 @@ from backend.core.security import authenticate_user, create_access_token, get_cu
 from backend.database.connection import get_session
 from backend.models import Usuario
 from backend.schemas.usuario import Token, UsuarioCreate, UsuarioRead
+from backend.services.sessoes import criar
 from backend.services.usuarios import criar_usuario
 
 router = APIRouter(tags=["Acesso"])
@@ -22,10 +23,12 @@ def login(
         raise HTTPException(
             401, "Usuário ou senha incorretos", headers={"WWW-Authenticate": "Bearer"}
         )
+    record, code = criar(session, user, request.app.state.settings)
     return Token(
+        browser_code=code,
         access_token=create_access_token(
-            user.username, request.app.state.settings, user.token_version
-        )
+            user.username, request.app.state.settings, user.token_version, record.id
+        ),
     )
 
 

@@ -1,7 +1,9 @@
 import streamlit as st
 
 from frontend.services.task_service import APIError
+from frontend.session import persist_state
 from frontend.views.ordens import horario
+from frontend.views.paginacao import carregar_pagina, render_paginacao, reset_page
 
 
 @st.fragment(run_every="10s")
@@ -15,18 +17,24 @@ def render_avisos(service, token, report_error):
         )
         return
     st.caption(f"Avisos não lidos: {resumo['nao_lidas']}")
-    with st.expander("Avisos de produtos prontos", expanded=resumo["nao_lidas"] > 0):
+    with st.expander("Avisos de produtos prontos", expanded=False):
         st.caption(
             "Atualização automática a cada 10 segundos com a sessão ativa. Ler não confirma coleta."
         )
-        mostrar_lidos = st.checkbox("Incluir avisos lidos", key="avisos_lidos")
-        pagina = st.number_input(
-            "Página de avisos", min_value=1, value=1, step=1, key="avisos_pagina"
+        mostrar_lidos = st.checkbox(
+            "Incluir avisos lidos",
+            key="avisos_lidos",
+            on_change=reset_page,
+            args=("avisos_pagina",),
         )
         try:
-            caixa = service.notificacoes(
-                token, somente_nao_lidas=not mostrar_lidos, offset=(pagina - 1) * 10, limit=10
+            caixa, pagina, paginas = carregar_pagina(
+                lambda **kwargs: service.notificacoes(token, **kwargs),
+                "avisos_pagina",
+                tamanho=10,
+                somente_nao_lidas=not mostrar_lidos,
             )
+            render_paginacao("avisos_pagina", pagina, paginas, caixa["total"], tamanho=10)
         except APIError as error:
             report_error(error)
             return
@@ -52,3 +60,5 @@ def render_avisos(service, token, report_error):
                         report_error(error)
             else:
                 st.caption(f"Lido em {horario(aviso['lida_em'])}")
+
+    persist_state(service)

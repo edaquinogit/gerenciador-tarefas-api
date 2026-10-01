@@ -37,6 +37,7 @@ class UsuarioRead(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    browser_code: str | None = None
 
 
 class FuncionarioCreate(UsuarioCreate):

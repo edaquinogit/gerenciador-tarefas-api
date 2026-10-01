@@ -33,6 +33,9 @@ def environment(directory: Path, secret: str) -> dict[str, str]:
         "ALLOW_REGISTRATION": "false",
         "CORS_ORIGINS": "[]",
         "API_URL": "http://127.0.0.1:8001",
+        "PUBLIC_API_URL": "http://127.0.0.1:8001",
+        "BROWSER_ORIGINS": '["http://127.0.0.1:8502"]',
+        "SESSION_COOKIE_SECURE": "false",
         "PILOT_MODE": "true",
     }
 

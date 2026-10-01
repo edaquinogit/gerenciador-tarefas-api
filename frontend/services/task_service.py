@@ -126,3 +126,12 @@ class TaskService:
 
     def pagina_ordens(self, token: str, **params):
         return self._request("GET", "/ordens/pagina", token, params=params)
+
+    def sair(self, token):
+        return self._request("POST", "/sessoes/sair", token)
+
+    def estado(self, token):
+        return self._request("GET", "/sessoes/estado", token)
+
+    def salvar_estado(self, token, state):
+        return self._request("PUT", "/sessoes/estado", token, json={"state": state})

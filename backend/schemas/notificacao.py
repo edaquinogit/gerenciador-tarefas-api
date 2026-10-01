@@ -19,5 +19,6 @@ class NotificacaoRead(BaseModel):
 
 
 class CaixaAvisos(BaseModel):
+    total: int
     nao_lidas: int
     itens: list[NotificacaoRead]

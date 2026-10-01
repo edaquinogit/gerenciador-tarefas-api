@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from backend.core.config import Settings
 from backend.database.connection import get_session
-from backend.models import Usuario
+from backend.models import Sessao, Usuario
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -37,11 +37,14 @@ def authenticate_user(session: Session, username: str, password: str) -> Usuario
     return user if user and user.is_active and valid else None
 
 
-def create_access_token(username: str, settings: Settings, token_version: int = 0) -> str:
+def create_access_token(
+    username: str, settings: Settings, token_version: int = 0, session_id: str | None = None
+) -> str:
     return jwt.encode(
         {
             "sub": username,
             "ver": token_version,
+            "sid": session_id,
             "exp": datetime.now(timezone.utc)
             + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         },
@@ -79,6 +82,16 @@ def get_current_user(
         or payload["ver"] != user.token_version
     ):
         raise error
+    sid = payload.get("sid")
+    login_session = session.get(Sessao, sid) if isinstance(sid, str) else None
+    if (
+        not login_session
+        or login_session.usuario_id != user.id
+        or login_session.revogada
+        or login_session.expira_em <= datetime.now(timezone.utc).replace(tzinfo=None)
+    ):
+        raise error
+    request.state.login_session = login_session
     return user
 
 

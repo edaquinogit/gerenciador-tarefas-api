@@ -29,6 +29,7 @@ def test_fresh_database_and_no_schema_drift(tmp_path):
         "eventoordem",
         "notificacao",
         "alembic_version",
+        "sessao",
     }
     result = run("-m", "alembic", "check", url=url)
     assert result.returncode == 0, result.stdout + result.stderr
@@ -247,7 +248,7 @@ def test_v6_preserves_orders_history_and_notifications(tmp_path):
                 assert after.pop("categoria") == "OUTROS"
             assert after == before[table]
         assert not conn.exec_driver_sql("PRAGMA foreign_key_check").all()
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0006"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0007"
     engine.dispose()
     assert run("-m", "alembic", "check", url=url).returncode == 0
     assert run("-m", "alembic", "downgrade", "0005", url=url).returncode != 0

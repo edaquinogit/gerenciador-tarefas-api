@@ -83,3 +83,15 @@ def setores(client, admin_headers):
         ).json()["access_token"]
         result[setor] = {"Authorization": f"Bearer {token}"}
     return result
+
+
+@pytest.fixture(autouse=True)
+def browser_component_for_apptest(monkeypatch):
+    # AppTest não executa JavaScript. Fluxo real do cookie tem teste de navegador separado.
+    from frontend import session as frontend_session
+
+    monkeypatch.setattr(
+        frontend_session,
+        "browser_session",
+        lambda **kwargs: {"status": "guest", "event": "apptest"},
+    )

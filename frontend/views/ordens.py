@@ -10,6 +10,7 @@ from backend.services.classificador_produtos import (
     rotulo_categoria,
 )
 from frontend.services.task_service import APIError
+from frontend.session import persist_state
 from frontend.views.paginacao import carregar_pagina, render_paginacao
 
 FUSO = ZoneInfo("America/Bahia")
@@ -156,7 +157,8 @@ def render_ordens(service, token, user, report_error):
         st.session_state["op_quantidade"] = 1
     if admin or setor == "SOLICITACAO":
         with st.expander("Nova ordem"):
-            with st.form("nova_ordem"):
+            with st.container(border=True):
+                st.caption("Rascunho salvo ao confirmar cada campo (Enter ou sair do campo).")
                 produto = st.text_input("Produto", max_chars=150, key="op_produto")
                 especificacao = st.text_input(
                     "Especificação (medida, cor ou tecido)", max_chars=500, key="op_especificacao"
@@ -171,21 +173,25 @@ def render_ordens(service, token, user, report_error):
                 unidade = st.selectbox(
                     "Unidade",
                     ["pecas", "kits"],
+                    key="op_unidade",
                     format_func=lambda v: "Peças" if v == "pecas" else "Kits",
                 )
                 prioridade = st.selectbox(
-                    "Prioridade da ordem", ["NORMAL", "URGENTE"], format_func=str.title
+                    "Prioridade da ordem",
+                    ["NORMAL", "URGENTE"],
+                    format_func=str.title,
+                    key="op_prioridade",
                 )
                 dia = st.date_input(
-                    "Data limite", value=datetime.now(FUSO).date() + timedelta(days=1)
+                    "Data limite", value=datetime.now(FUSO).date() + timedelta(days=1), key="op_dia"
                 )
-                hora = st.time_input("Horário limite", value=time(17))
+                hora = st.time_input("Horário limite", value=time(17), key="op_hora")
                 observacao = st.text_area("Observação", max_chars=1000, key="op_observacao")
                 st.caption(
                     "Horário da Bahia. Cada ordem representa um lote completo. "
                     "A categoria é definida automaticamente."
                 )
-                if st.form_submit_button("Enviar para produção"):
+                if st.button("Enviar para produção", type="primary"):
                     if (
                         not produto.strip()
                         or not especificacao.strip()
@@ -207,8 +213,10 @@ def render_ordens(service, token, user, report_error):
                             "observacao": observacao.strip(),
                         }
                         try:
+                            persist_state(service, required=True)
                             ordem = service.criar_ordem(data, token)
                             del st.session_state["nova_ordem_request"]
+                            st.session_state.get("saved_ui", {}).pop("nova_ordem_request", None)
                             st.session_state.limpar_nova_ordem = True
                             st.session_state.flash = (
                                 f"Ordem #{ordem['id']} enviada para produção "
@@ -219,22 +227,26 @@ def render_ordens(service, token, user, report_error):
                             report_error(error)
     st.caption("Fila compartilhada entre os setores. Use Atualizar fila para consultar mudanças.")
     st.button("Atualizar fila")
-    status = st.selectbox(
+    filtros = st.columns(3)
+    status = filtros[0].selectbox(
         "Etapa",
         ["TODAS", *ETAPAS],
+        key="ordens_etapa",
         index=4 if setor == "COLETA_EMBALAGEM" else 0,
         format_func=lambda v: ETAPAS.get(v, "Todas"),
         on_change=reset_pagina_ordens,
     )
-    situacao = st.selectbox(
+    situacao = filtros[1].selectbox(
         "Situação",
         ["ativas", "coletadas", "canceladas", "todas"],
+        key="ordens_situacao",
         format_func=str.title,
         on_change=reset_pagina_ordens,
     )
-    categoria_filtro = st.selectbox(
+    categoria_filtro = filtros[2].selectbox(
         "Categoria",
         ["TODAS", *ORDEM_CATEGORIAS],
+        key="ordens_categoria",
         format_func=lambda v: "Todas" if v == "TODAS" else rotulo_categoria(v),
         on_change=reset_pagina_ordens,
     )
