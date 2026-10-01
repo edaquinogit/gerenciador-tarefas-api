@@ -16,7 +16,11 @@ _bridge = declare_component(
 
 def browser_session(**kwargs):
     return _bridge(
-        api_url=os.getenv("PUBLIC_API_URL", ""), key="sessao_browser", default=None, **kwargs
+        api_url=os.getenv("PUBLIC_API_URL", ""),
+        api_port=int(os.getenv("PUBLIC_API_PORT", "8000")),
+        key="sessao_browser",
+        default=None,
+        **kwargs,
     )
 
 

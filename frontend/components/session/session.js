@@ -10,7 +10,7 @@
     send("streamlit:setComponentValue", {value: {...value, event: `${Date.now()}-${++eventId}`}, dataType: "json"});
   }
   async function request(path, body) {
-    const base = args.api_url || `${location.protocol}//${location.hostname}:8000`;
+    const base = args.api_url || `${location.protocol}//${location.hostname}:${args.api_port || 8000}`;
     const response = await fetch(`${base.replace(/\/$/, "")}/sessoes/${path}`, {
       method: "POST", credentials: "include", cache: "no-store",
       headers: {"Content-Type": "application/json", "X-Session-Request": "1"},
