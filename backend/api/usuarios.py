@@ -5,6 +5,7 @@ from backend.core.security import get_current_user, require_admin
 from backend.database.connection import get_session
 from backend.models import Usuario
 from backend.schemas.usuario import (
+    DecisaoSenha,
     FuncionarioCreate,
     FuncionarioUpdate,
     MeuTelefoneUpdate,
@@ -12,7 +13,7 @@ from backend.schemas.usuario import (
     SenhaUpdate,
     UsuarioRead,
 )
-from backend.services import usuarios
+from backend.services import autorizacoes_senha, usuarios
 
 router = APIRouter(tags=["Funcionários e setores"])
 SETORES = [
@@ -20,6 +21,35 @@ SETORES = [
     {"id": "PRODUCAO", "nome": "Produção"},
     {"id": "COLETA_EMBALAGEM", "nome": "Coleta e embalagem"},
 ]
+
+
+@router.get("/usuarios/me/autorizacao-senha")
+def minha_autorizacao(
+    session: Session = Depends(get_session), user: Usuario = Depends(get_current_user)
+):
+    return autorizacoes_senha.consultar(session, user)
+
+
+@router.post("/usuarios/me/autorizacao-senha")
+def solicitar_senha(
+    session: Session = Depends(get_session), user: Usuario = Depends(get_current_user)
+):
+    return autorizacoes_senha.solicitar(session, user)
+
+
+@router.get("/admin/autorizacoes-senha")
+def autorizacoes(session: Session = Depends(get_session), admin: Usuario = Depends(require_admin)):
+    return autorizacoes_senha.listar(session)
+
+
+@router.post("/admin/funcionarios/{usuario_id}/autorizacao-senha")
+def decidir_senha(
+    usuario_id: int,
+    data: DecisaoSenha,
+    session: Session = Depends(get_session),
+    admin: Usuario = Depends(require_admin),
+):
+    return autorizacoes_senha.decidir(session, usuario_id, admin, data.permitir, data.versao)
 
 
 @router.get("/setores")

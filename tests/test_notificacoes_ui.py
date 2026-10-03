@@ -21,6 +21,7 @@ def test_notifications_render_and_read_without_collection(monkeypatch, client, s
         is None
     )
     labeled(app.checkbox, "Incluir avisos lidos").check().run()
+    assert not app.exception
     assert any("Lido em" in e.value for e in app.caption)
 
 

@@ -2,7 +2,7 @@ import streamlit as st
 
 from frontend.services.task_service import APIError
 from frontend.session import persist_state
-from frontend.views.ordens import horario
+from frontend.views.ordens import horario, selecionar_ordem
 from frontend.views.paginacao import carregar_pagina, render_paginacao, reset_page
 
 
@@ -17,7 +17,12 @@ def render_avisos(service, token, report_error):
         )
         return
     st.caption(f"Avisos não lidos: {resumo['nao_lidas']}")
-    with st.expander("Avisos de produtos prontos", expanded=False):
+    destaque = st.empty()
+    if resumo["nao_lidas"]:
+        destaque.info(
+            f"Você tem {resumo['nao_lidas']} aviso(s) de produtos prontos. Confira a situação de coleta abaixo."
+        )
+    with st.expander("Avisos de produtos prontos", expanded=bool(resumo["nao_lidas"])):
         st.caption(
             "Atualização automática a cada 10 segundos com a sessão ativa. Ler não confirma coleta."
         )
@@ -42,6 +47,13 @@ def render_avisos(service, token, report_error):
             st.info("Nenhum aviso nesta página.")
         for aviso in caixa["itens"]:
             st.text(aviso["mensagem"])
+            if st.button(
+                "Abrir ordem",
+                key=f"aviso_ordem_{aviso['id']}",
+                on_click=selecionar_ordem,
+                args=(aviso["ordem_id"],),
+            ):
+                st.rerun()
             st.caption(horario(aviso["criado_em"]))
             if aviso["situacao"] == "AGUARDANDO_COLETA":
                 st.success("Disponível para coleta e embalagem.")

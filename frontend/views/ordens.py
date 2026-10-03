@@ -11,6 +11,7 @@ from backend.services.classificador_produtos import (
 )
 from frontend.services.task_service import APIError
 from frontend.session import persist_state
+from frontend.views.filtros import render_filtros
 from frontend.views.paginacao import carregar_pagina, render_paginacao
 
 FUSO = ZoneInfo("America/Bahia")
@@ -47,104 +48,154 @@ def _categoria_ordem(ordem):
     return codigo if codigo in ORDEM_CATEGORIAS else CATEGORIA_OUTROS
 
 
-def agrupar_por_categoria(ordens):
-    grupos = {codigo: [] for codigo in ORDEM_CATEGORIAS}
-    for ordem in ordens:
-        grupos[_categoria_ordem(ordem)].append(ordem)
-    return [(codigo, itens) for codigo, itens in grupos.items() if itens]
+def selecionar_ordem(ident):
+    st.session_state["ordem_detalhe"] = ident
+
+
+def fechar_detalhes():
+    st.session_state["ordem_detalhe"] = 0
 
 
 def render_ordem(service, token, user, report_error, ordem, admin, setor):
     ident = ordem["id"]
+    urgente = ordem["prioridade"] == "URGENTE"
     encerrada = ordem["cancelado_em"] or ordem["coletado_em"]
-    with st.container(border=True):
-        st.markdown(f"**#{ident} — {ordem['produto']}**")
-        st.caption(
-            f"{rotulo_categoria(_categoria_ordem(ordem))} • "
-            f"{ordem['quantidade']} {ordem['unidade']} • "
-            f"{ETAPAS[ordem['status']]} • "
-            f"Prazo: {horario(ordem['prazo'])}"
+    atrasada = (
+        not encerrada
+        and ordem["status"] != "PRONTO"
+        and datetime.fromisoformat(ordem["prazo"].replace("Z", "+00:00")) < datetime.now(FUSO)
+    )
+    with st.container(border=True, key=f"card_{'urgente' if urgente else 'normal'}_{ident}"):
+        st.markdown(":red[**URGENTE**]" if urgente else ":blue[**NORMAL**]")
+        if st.button(
+            f"**#{ident} — {ordem['produto']}**",
+            key=f"abrir_ordem_{ident}",
+            width="stretch",
+            on_click=selecionar_ordem,
+            args=(ident,),
+            help="Abrir detalhes e ações desta ordem",
+        ):
+            st.rerun()
+        situacao = (
+            "Cancelada"
+            if ordem["cancelado_em"]
+            else "Coletada"
+            if ordem["coletado_em"]
+            else ETAPAS[ordem["status"]]
         )
-        if ordem["prioridade"] == "URGENTE":
-            st.warning("Prioridade: URGENTE")
+        st.caption(
+            f"{ordem['quantidade']} {ordem['unidade']} · {rotulo_categoria(_categoria_ordem(ordem))}"
+        )
+        if situacao == "Pronto":
+            st.markdown(":green[**Pronto para coleta**]")
         else:
-            st.caption("Prioridade: Normal")
-        if ordem["cancelado_em"]:
-            st.warning(f"Cancelada em {horario(ordem['cancelado_em'])}")
-        elif ordem["coletado_em"]:
-            st.success(f"Coletada por {ordem['coletado_nome']} em {horario(ordem['coletado_em'])}")
-        elif ordem["status"] == "PRONTO":
-            st.success("Produto disponível para coleta e embalagem — lote completo.")
-        else:
-            st.info(ETAPAS[ordem["status"]])
-        with st.expander("Detalhes"):
-            st.text(ordem["especificacao"])
-            if ordem["observacao"]:
-                st.text(ordem["observacao"])
-            st.caption(
-                f"Solicitante: {ordem['solicitante_nome']} • "
-                f"Responsável pela última etapa: "
-                f"{ordem['responsavel_nome'] or 'Ainda não iniciada'}"
-            )
-        if not encerrada and (admin or setor == "PRODUCAO") and ordem["status"] in PROXIMA:
-            destino, label = PROXIMA[ordem["status"]]
-            if st.button(label, key=f"etapa_{ident}"):
+            st.markdown(f"**{situacao}**")
+        st.caption(f"Prazo: {horario(ordem['prazo'])}")
+        if atrasada:
+            st.markdown(":orange[**Prazo vencido**]")
+
+
+@st.dialog("Detalhes da ordem", width="large", on_dismiss=fechar_detalhes)
+def abrir_detalhes(service, token, report_error, ident):
+    try:
+        user = service.me(token)
+        ordem = service.detalhe_ordem(ident, token)
+    except APIError as error:
+        report_error(error)
+        if st.button("Fechar detalhes", on_click=fechar_detalhes):
+            st.rerun()
+        return
+    admin, setor = user["perfil"] == "ADMIN", user["setor"]
+    encerrada = ordem["cancelado_em"] or ordem["coletado_em"]
+    st.subheader(f"#{ident} — {ordem['produto']}")
+    st.markdown(":red[**URGENTE**]" if ordem["prioridade"] == "URGENTE" else ":blue[**NORMAL**]")
+    st.caption(f"{ordem['quantidade']} {ordem['unidade']} · Prazo: {horario(ordem['prazo'])}")
+    st.text(ordem["especificacao"])
+    if ordem["observacao"]:
+        st.text(ordem["observacao"])
+    st.caption(
+        f"Solicitante: {ordem['solicitante_nome']} · Responsável: {ordem['responsavel_nome'] or 'Ainda não iniciada'}"
+    )
+    if ordem["cancelado_em"]:
+        st.warning("Ordem cancelada.")
+    elif ordem["coletado_em"]:
+        st.success(f"Coletada por {ordem['coletado_nome']} em {horario(ordem['coletado_em'])}")
+    elif ordem["status"] == "PRONTO":
+        st.success("Produto disponível para coleta e embalagem — lote completo.")
+    else:
+        st.info(ETAPAS[ordem["status"]])
+    if not encerrada and (admin or setor == "PRODUCAO") and ordem["status"] in PROXIMA:
+        destino, label = PROXIMA[ordem["status"]]
+        if st.button(label, key=f"etapa_{ident}"):
+            try:
+                service.etapa_ordem(ident, {**command(ordem, destino), "status": destino}, token)
+                st.session_state.flash = f"Ordem #{ident}: {ETAPAS[destino]}."
+                st.rerun()
+            except APIError as error:
+                report_error(error)
+    if not encerrada and ordem["status"] == "PRONTO" and (admin or setor == "COLETA_EMBALAGEM"):
+        if st.checkbox("Confirmo a retirada de todo o lote", key=f"retirada_{ident}"):
+            if st.button("Confirmar coleta", key=f"coleta_{ident}"):
                 try:
-                    service.etapa_ordem(
-                        ident, {**command(ordem, destino), "status": destino}, token
-                    )
-                    st.session_state.flash = f"Ordem #{ident}: {ETAPAS[destino]}."
+                    service.coletar_ordem(ident, command(ordem, "COLETA"), token)
+                    st.session_state.flash = f"Coleta da ordem #{ident} registrada."
                     st.rerun()
                 except APIError as error:
                     report_error(error)
-        if not encerrada and ordem["status"] == "PRONTO" and (admin or setor == "COLETA_EMBALAGEM"):
-            if st.checkbox("Confirmo a retirada de todo o lote", key=f"retirada_{ident}"):
-                if st.button("Confirmar coleta", key=f"coleta_{ident}"):
-                    try:
-                        service.coletar_ordem(ident, command(ordem, "COLETA"), token)
-                        st.session_state.flash = f"Coleta da ordem #{ident} registrada."
-                        st.rerun()
-                    except APIError as error:
-                        report_error(error)
-        if admin and not encerrada:
-            with st.expander("Cancelar ordem"):
-                with st.form(f"cancelar_{ident}"):
-                    motivo = st.text_input("Justificativa", max_chars=500)
-                    if st.form_submit_button("Confirmar cancelamento"):
-                        if len(motivo.strip()) < 5:
-                            st.error("Informe uma justificativa com pelo menos 5 caracteres.")
-                        else:
-                            try:
-                                service.cancelar_ordem(
-                                    ident,
-                                    {
-                                        **command(ordem, "CANCELAMENTO"),
-                                        "motivo": motivo.strip(),
-                                    },
-                                    token,
-                                )
-                                st.session_state.flash = (
-                                    f"Ordem #{ident} cancelada. Histórico preservado."
-                                )
-                                st.rerun()
-                            except APIError as error:
-                                report_error(error)
-        if st.checkbox("Mostrar histórico", key=f"historico_{ident}"):
-            try:
-                eventos = service.historico_ordem(ident, token)
-                for evento in eventos:
-                    st.text(
-                        f"{horario(evento['criado_em'])} — {evento['usuario_nome']} — "
-                        f"{evento['acao']} — {ETAPAS[evento['status_novo']]}"
-                    )
-                    if evento["motivo"]:
-                        st.text(evento["motivo"])
-            except APIError as error:
-                report_error(error)
+    if admin and not encerrada:
+        with st.expander("Cancelar ordem"):
+            with st.form(f"cancelar_{ident}"):
+                motivo = st.text_input("Justificativa", max_chars=500)
+                if st.form_submit_button("Confirmar cancelamento"):
+                    if len(motivo.strip()) < 5:
+                        st.error("Informe uma justificativa com pelo menos 5 caracteres.")
+                    else:
+                        try:
+                            service.cancelar_ordem(
+                                ident,
+                                {
+                                    **command(ordem, "CANCELAMENTO"),
+                                    "motivo": motivo.strip(),
+                                },
+                                token,
+                            )
+                            st.session_state.flash = (
+                                f"Ordem #{ident} cancelada. Histórico preservado."
+                            )
+                            st.rerun()
+                        except APIError as error:
+                            report_error(error)
+    if st.checkbox("Mostrar histórico", key=f"historico_{ident}"):
+        try:
+            eventos = service.historico_ordem(ident, token)
+            for evento in eventos:
+                st.text(
+                    f"{horario(evento['criado_em'])} — {evento['usuario_nome']} — "
+                    f"{evento['acao']} — {ETAPAS[evento['status_novo']]}"
+                )
+                if evento["motivo"]:
+                    st.text(evento["motivo"])
+        except APIError as error:
+            report_error(error)
+
+    if st.button("Fechar detalhes", on_click=fechar_detalhes):
+        st.rerun()
+    persist_state(service)
 
 
-def reset_pagina_ordens():
-    st.session_state["ordens_pagina"] = 1
+def render_cards(service, token, user, report_error, ordens):
+    for start in range(0, len(ordens), 2):
+        for col, ordem in zip(st.columns(2), ordens[start : start + 2]):
+            with col:
+                render_ordem(
+                    service,
+                    token,
+                    user,
+                    report_error,
+                    ordem,
+                    user["perfil"] == "ADMIN",
+                    user["setor"],
+                )
 
 
 def render_ordens(service, token, user, report_error):
@@ -227,28 +278,10 @@ def render_ordens(service, token, user, report_error):
                             report_error(error)
     st.caption("Fila compartilhada entre os setores. Use Atualizar fila para consultar mudanças.")
     st.button("Atualizar fila")
-    filtros = st.columns(3)
-    status = filtros[0].selectbox(
-        "Etapa",
-        ["TODAS", *ETAPAS],
-        key="ordens_etapa",
-        index=4 if setor == "COLETA_EMBALAGEM" else 0,
-        format_func=lambda v: ETAPAS.get(v, "Todas"),
-        on_change=reset_pagina_ordens,
-    )
-    situacao = filtros[1].selectbox(
-        "Situação",
-        ["ativas", "coletadas", "canceladas", "todas"],
-        key="ordens_situacao",
-        format_func=str.title,
-        on_change=reset_pagina_ordens,
-    )
-    categoria_filtro = filtros[2].selectbox(
-        "Categoria",
-        ["TODAS", *ORDEM_CATEGORIAS],
-        key="ordens_categoria",
-        format_func=lambda v: "Todas" if v == "TODAS" else rotulo_categoria(v),
-        on_change=reset_pagina_ordens,
+    status, situacao, categoria_filtro = render_filtros(
+        "ordens",
+        "ordens_pagina",
+        etapa_inicial="PRONTO" if setor == "COLETA_EMBALAGEM" else "TODAS",
     )
     params = {"situacao": situacao}
     if categoria_filtro != "TODAS":
@@ -267,22 +300,11 @@ def render_ordens(service, token, user, report_error):
     if not ordens:
         st.info("Nenhuma ordem encontrada para os filtros selecionados.")
         st.caption(
-            "Até 20 ordens por página. Urgentes no topo, em ordem de prazo; demais ordens por categoria. Contagens dos grupos referem-se apenas a esta página."
+            "Até 20 ordens por página. Urgentes primeiro; em cada prioridade, menor prazo primeiro."
         )
         return
-    urgentes = [ordem for ordem in ordens if ordem["prioridade"] == "URGENTE"]
-    if urgentes:
-        st.subheader(f"Urgentes — {len(urgentes)} nesta página")
-        for ordem in urgentes:
-            render_ordem(service, token, user, report_error, ordem, admin, setor)
-    normais = [ordem for ordem in ordens if ordem["prioridade"] != "URGENTE"]
-    for codigo, itens in agrupar_por_categoria(normais):
-        quantidade = len(itens)
-        rotulo = rotulo_categoria(codigo)
-        titulo = f"{rotulo} — {quantidade} {'ordem' if quantidade == 1 else 'ordens'}"
-        st.subheader(titulo)
-        for ordem in itens:
-            render_ordem(service, token, user, report_error, ordem, admin, setor)
+    # A API ordena globalmente por prioridade e prazo antes da paginação.
+    render_cards(service, token, user, report_error, ordens)
     st.caption(
-        "Até 20 ordens por página. Urgentes no topo, em ordem de prazo; demais ordens por categoria. Contagens dos grupos referem-se apenas a esta página."
+        "Até 20 ordens por página. Urgentes primeiro; em cada prioridade, menor prazo primeiro."
     )

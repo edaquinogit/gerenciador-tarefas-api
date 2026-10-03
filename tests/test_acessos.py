@@ -146,10 +146,13 @@ def test_admin_cannot_disable_or_edit_itself_from_employee_endpoints(client, adm
     assert client.get("/usuarios/me", headers=admin_headers).status_code == 200
 
 
-def test_change_own_password_requires_current_password(client, user_factory):
+def test_change_own_password_requires_current_password(client, user_factory, admin_headers):
     headers = user_factory()
     body = {"current_password": "errada", "password": "nova-senha-123"}
     assert client.post("/usuarios/me/senha", headers=headers, json=body).status_code == 400
+    from tests.test_autorizacoes_senha import autorizar
+
+    autorizar(client, headers, admin_headers)
     body["current_password"] = "senha-segura-123"
     assert client.post("/usuarios/me/senha", headers=headers, json=body).status_code == 200
     assert client.get("/usuarios/me", headers=headers).status_code == 401

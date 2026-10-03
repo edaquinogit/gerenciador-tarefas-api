@@ -34,7 +34,7 @@ Os funcionários de produção compartilham a mesma fila; não há atribuição 
 - Cada alteração exige a versão lida da ordem. Se outra pessoa agir primeiro, a API responde 409 e solicita atualização da fila.
 - A interface reutiliza o identificador de envio numa tentativa repetida. A API registra um único evento para a mesma operação. Reutilizar identificador com outros dados retorna conflito.
 - Alteração e histórico são gravados na mesma transação. Uma falha ao gravar histórico não pode deixar a etapa avançada.
-- Tarefas pessoais antigas continuam no menu **Minhas tarefas**. Não são transformadas silenciosamente em ordens reais.
+- Tarefas pessoais antigas são preservadas no banco e retiradas dos menus. Não são transformadas em ordens reais.
 - A fila mostra 20 itens por página, primeiro urgentes e depois prazo/ID. Filtros: etapa e ativas/coletadas/canceladas/todas. A página pode ser alterada manualmente; ao trocar filtros, volte à página 1 se necessário.
 
 ## API

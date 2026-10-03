@@ -49,13 +49,11 @@ def test_isolated_pilot_complete_flow_and_persistence(tmp_path, monkeypatch):
         )
         for status in ("CORTANDO", "COSTURANDO", "PRONTO"):
             order = avancar(client, order, headers["PRODUCAO"], status)
-        for role in ("ADMIN", "SOLICITACAO", "COLETA_EMBALAGEM"):
+        for role in ("ADMIN", "SOLICITACAO"):
             assert client.get("/notificacoes", headers=headers[role]).json()["nao_lidas"] == 1
-        notice = client.get("/notificacoes", headers=headers["COLETA_EMBALAGEM"]).json()["itens"][0]
+        notice = client.get("/notificacoes", headers=headers["ADMIN"]).json()["itens"][0]
         assert (
-            client.patch(
-                f"/notificacoes/{notice['id']}/lida", headers=headers["COLETA_EMBALAGEM"]
-            ).status_code
+            client.patch(f"/notificacoes/{notice['id']}/lida", headers=headers["ADMIN"]).status_code
             == 200
         )
         assert (
