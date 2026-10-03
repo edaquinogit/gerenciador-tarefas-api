@@ -20,7 +20,7 @@ def caixa(client, headers, **params):
     return response.json()
 
 
-def test_ready_notifies_requester_admin_and_collection_once(client, setores, user_factory):
+def test_ready_notifies_only_requester_and_admin_once(client, setores, user_factory):
     outros = user_factory("outro_solicitante")
     # Cadastro inativo no setor de coleta não recebe avisos.
     inactive = client.post(
@@ -50,16 +50,17 @@ def test_ready_notifies_requester_admin_and_collection_once(client, setores, use
             ).status_code
             == 200
         )
-    for setor in ("SOLICITACAO", "ADMIN", "COLETA_EMBALAGEM"):
+    for setor in ("SOLICITACAO", "ADMIN"):
         resumo = caixa(client, setores[setor])
         assert resumo["nao_lidas"] == 1
         assert resumo["itens"][0]["ordem_id"] == ordem["id"]
         assert resumo["itens"][0]["situacao"] == "AGUARDANDO_COLETA"
         assert resumo["itens"][0]["criado_em"].endswith("Z")
     assert caixa(client, setores["PRODUCAO"])["nao_lidas"] == 0
-    assert client.get("/notificacoes", headers=outros).status_code == 403
+    assert caixa(client, outros)["nao_lidas"] == 0
+    assert caixa(client, setores["COLETA_EMBALAGEM"])["nao_lidas"] == 0
     with Session(client.app.state.engine) as session:
-        assert len(session.exec(select(Notificacao)).all()) == 3
+        assert len(session.exec(select(Notificacao)).all()) == 2
         assert not session.exec(
             select(Notificacao).where(Notificacao.usuario_id == inactive["id"])
         ).all()
@@ -91,7 +92,7 @@ def test_read_is_individual_persistent_idempotent_and_does_not_collect(client, s
         == saved["lida_em"]
     )
     assert caixa(client, setores["SOLICITACAO"])["nao_lidas"] == 0
-    assert caixa(client, setores["COLETA_EMBALAGEM"])["nao_lidas"] == 1
+    assert caixa(client, setores["ADMIN"])["nao_lidas"] == 1
     response = client.get(f"/ordens/{ordem['id']}", headers=setores["SOLICITACAO"]).json()
     assert response["coletado_em"] is None and response["versao"] == ordem["versao"]
     token = client.post(
@@ -167,3 +168,64 @@ def test_pagination_count_is_not_page_size(client, setores):
     assert first["nao_lidas"] == second["nao_lidas"] == 2
     assert len(first["itens"]) == 1
     assert first["itens"][0]["id"] != second["itens"][0]["id"]
+
+
+def test_legacy_collection_notice_is_hidden_and_cannot_be_marked(client, setores):
+    ordem = pronta(client, setores)
+    collection = client.get("/usuarios/me", headers=setores["COLETA_EMBALAGEM"]).json()
+    with Session(client.app.state.engine) as session:
+        evento = session.exec(
+            select(EventoOrdem).where(
+                EventoOrdem.ordem_id == ordem["id"], EventoOrdem.status_novo == "PRONTO"
+            )
+        ).one()
+        notice = Notificacao(
+            evento_id=evento.id,
+            ordem_id=ordem["id"],
+            usuario_id=collection["id"],
+            mensagem="Aviso legado",
+        )
+        session.add(notice)
+        session.commit()
+        session.refresh(notice)
+        ident = notice.id
+    assert caixa(client, setores["COLETA_EMBALAGEM"], somente_nao_lidas=False) == {
+        "total": 0,
+        "nao_lidas": 0,
+        "itens": [],
+    }
+    assert (
+        client.patch(f"/notificacoes/{ident}/lida", headers=setores["COLETA_EMBALAGEM"]).status_code
+        == 404
+    )
+    # A fila de produção continua compartilhada; privacidade aplica-se à caixa de avisos.
+    assert (
+        client.get(f"/ordens/{ordem['id']}", headers=setores["COLETA_EMBALAGEM"]).status_code == 200
+    )
+
+
+def test_two_requesters_have_separate_inboxes(client, setores):
+    response = client.post(
+        "/admin/funcionarios",
+        headers=setores["ADMIN"],
+        json={
+            "username": "solicitante2",
+            "telefone": "79999990002",
+            "password": "senha-segura-123",
+            "setor": "SOLICITACAO",
+        },
+    )
+    assert response.status_code == 201
+    token = client.post(
+        "/token", data={"username": "solicitante2", "password": "senha-segura-123"}
+    ).json()["access_token"]
+    other = {"Authorization": f"Bearer {token}"}
+    primeira = pronta(client, setores)
+    segunda = nova(client, other)
+    for status in ("CORTANDO", "COSTURANDO", "PRONTO"):
+        segunda = avancar(client, segunda, setores["PRODUCAO"], status)
+    assert [n["ordem_id"] for n in caixa(client, setores["SOLICITACAO"])["itens"]] == [
+        primeira["id"]
+    ]
+    assert [n["ordem_id"] for n in caixa(client, other)["itens"]] == [segunda["id"]]
+    assert caixa(client, setores["ADMIN"])["total"] == 2

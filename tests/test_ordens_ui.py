@@ -23,13 +23,14 @@ def test_three_sectors_full_ui_cycle(monkeypatch, client, setores):
     assert ordem[0]["categoria"] == "OUTROS"
     labeled(app.button, "Sair").click().run()
     enter(app, "producao")
-    assert any(e.value.startswith("Outros —") for e in app.subheader)
+    app.button(key=f"abrir_ordem_{ordem[0]['id']}").click().run()
     for button in ("Iniciar corte", "Iniciar costura", "Marcar lote pronto"):
         labeled(app.button, button).click().run()
         assert not app.exception
     assert any("disponível para coleta" in e.value for e in app.success)
     labeled(app.button, "Sair").click().run()
     enter(app, "coleta_embalagem")
+    app.button(key=f"abrir_ordem_{ordem[0]['id']}").click().run()
     labeled(app.checkbox, "Confirmo a retirada de todo o lote").check().run()
     labeled(app.button, "Confirmar coleta").click().run()
     assert not app.exception
@@ -61,21 +62,15 @@ def test_ui_groups_by_category_preserves_urgent_order(monkeypatch, client, setor
     app = app_with_api(monkeypatch, client)
     enter(app, "producao")
     assert not app.exception
-    headers = [e.value for e in app.subheader]
-    assert headers == [
-        "Urgentes — 1 nesta página",
-        "Roupa de cama — 1 ordem",
-        "Banho — 1 ordem",
-        "Cortinas — 1 ordem",
-    ]
-    texts = [e.value for e in app.markdown]
-    fronha = next(i for i, t in enumerate(texts) if "Fronha avulsa" in t)
-    lencol = next(i for i, t in enumerate(texts) if "Lençol casal" in t)
-    assert fronha < lencol
-    assert any("Prioridade: URGENTE" in e.value for e in app.warning)
+    cards = [e.label for e in app.button if str(e.key).startswith("abrir_ordem_")]
+    assert "Fronha avulsa" in cards[0]
+    assert len(cards) == 4
+    assert any("URGENTE" in e.value for e in app.markdown)
     labeled(app.selectbox, "Categoria").select("BANHO").run()
     assert not app.exception
-    assert [e.value for e in app.subheader] == ["Banho — 1 ordem"]
+    cards = [e for e in app.button if str(e.key).startswith("abrir_ordem_")]
+    assert len(cards) == 1 and "Toalha de banho" in cards[0].label
+    cards[0].click().run()
     assert any(button.label == "Iniciar corte" for button in app.button)
 
 
@@ -91,5 +86,5 @@ def test_category_filter_finds_orders_beyond_first_page(monkeypatch, client, set
     labeled(app.selectbox, "Categoria").select("BANHO").run()
     assert not app.exception and not app.error
     assert app.session_state["ordens_pagina"] == 1
-    assert [e.value for e in app.subheader] == ["Banho — 1 ordem"]
-    assert any("Toalha final" in e.value for e in app.markdown)
+    cards = [e for e in app.button if str(e.key).startswith("abrir_ordem_")]
+    assert len(cards) == 1 and "Toalha final" in cards[0].label

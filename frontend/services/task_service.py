@@ -30,11 +30,15 @@ class TaskService:
                 409: "Nome de usuário já cadastrado.",
                 422: "Dados inválidos. Confira os campos informados.",
             }
-            if path.startswith("/ordens") and response.status_code == 409:
+            if (path.startswith("/ordens") or "senha" in path) and response.status_code in {
+                400,
+                403,
+                409,
+            }:
                 try:
                     detail = response.json().get("detail")
                     if isinstance(detail, str):
-                        messages[409] = detail
+                        messages[response.status_code] = detail
                 except ValueError:
                     pass
             raise APIError(
@@ -68,6 +72,26 @@ class TaskService:
 
     def me(self, token: str):
         return self._request("GET", "/usuarios/me", token)
+
+    def autorizacao_senha(self, token):
+        return self._request("GET", "/usuarios/me/autorizacao-senha", token)
+
+    def solicitar_senha(self, token):
+        return self._request("POST", "/usuarios/me/autorizacao-senha", token)
+
+    def autorizacoes_senha(self, token):
+        return self._request("GET", "/admin/autorizacoes-senha", token)
+
+    def decidir_senha(self, ident, permitir, versao, token):
+        return self._request(
+            "POST",
+            f"/admin/funcionarios/{ident}/autorizacao-senha",
+            token,
+            json={"permitir": permitir, "versao": versao},
+        )
+
+    def detalhe_ordem(self, ident, token):
+        return self._request("GET", f"/ordens/{ident}", token)
 
     def setores(self, token: str):
         return self._request("GET", "/setores", token)

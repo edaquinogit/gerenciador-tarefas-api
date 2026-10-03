@@ -5,13 +5,12 @@ from backend.core.security import get_current_user
 from backend.database.connection import get_session
 from backend.models import Usuario
 from backend.schemas.notificacao import CaixaAvisos
-from backend.services import notificacoes, ordens
+from backend.services import notificacoes
 
 router = APIRouter(prefix="/notificacoes", tags=["Avisos de produtos"])
 
 
 def destinatario(user: Usuario = Depends(get_current_user)):
-    ordens.permitir(user)
     return user
 
 

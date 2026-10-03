@@ -5,6 +5,7 @@ from sqlmodel import Session, select, update
 from backend.core.security import get_password_hash, verify_password
 from backend.models import Usuario
 from backend.schemas.usuario import FuncionarioUpdate, UsuarioCreate
+from backend.services import autorizacoes_senha
 
 
 def criar_usuario(
@@ -46,6 +47,7 @@ def buscar_funcionario(session: Session, usuario_id: int) -> Usuario:
 
 def atualizar_funcionario(session: Session, usuario_id: int, data: FuncionarioUpdate) -> Usuario:
     buscar_funcionario(session, usuario_id)
+    autorizacoes_senha.revogar(session, usuario_id)
     contato = {"telefone": data.telefone} if "telefone" in data.model_fields_set else {}
     session.exec(
         update(Usuario)
@@ -63,14 +65,18 @@ def atualizar_funcionario(session: Session, usuario_id: int, data: FuncionarioUp
 
 
 def redefinir_senha(session: Session, user: Usuario, password: str) -> None:
-    session.exec(
+    result = session.exec(
         update(Usuario)
-        .where(Usuario.id == user.id)
+        .where(Usuario.id == user.id, Usuario.token_version == user.token_version)
         .values(
             password_hash=get_password_hash(password),
             token_version=Usuario.token_version + 1,
         )
     )
+    if result.rowcount != 1:
+        session.rollback()
+        raise HTTPException(409, "Conta alterada. Entre novamente e tente outra vez.")
+    autorizacoes_senha.revogar(session, user.id)
     session.commit()
 
 
@@ -79,6 +85,7 @@ def alterar_minha_senha(
 ) -> None:
     if not verify_password(current_password, user.password_hash):
         raise HTTPException(400, "Senha atual incorreta")
+    autorizacoes_senha.consumir(session, user)
     redefinir_senha(session, user, password)
 
 

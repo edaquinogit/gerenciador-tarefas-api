@@ -76,3 +76,9 @@ class SenhaUpdate(BaseModel):
 
 class MinhaSenhaUpdate(SenhaUpdate):
     current_password: str
+
+
+class DecisaoSenha(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    permitir: bool
+    versao: int = Field(ge=1)

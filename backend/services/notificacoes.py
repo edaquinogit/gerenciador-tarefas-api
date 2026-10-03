@@ -16,7 +16,6 @@ def gerar_produto_pronto(session: Session, ordem: Ordem, evento: EventoOrdem):
             or_(
                 Usuario.id == ordem.solicitante_id,
                 Usuario.perfil == "ADMIN",
-                Usuario.setor == "COLETA_EMBALAGEM",
             ),
         )
     ).all()
@@ -40,16 +39,16 @@ def situacao(ordem: Ordem) -> str:
 
 
 def listar(session: Session, user: Usuario, somente_nao_lidas: bool, offset: int, limit: int):
-    total = session.exec(
-        select(func.count())
-        .select_from(Notificacao)
-        .where(Notificacao.usuario_id == user.id, Notificacao.lida_em.is_(None))
-    ).one()
     query = (
         select(Notificacao, Ordem)
         .join(Ordem, Ordem.id == Notificacao.ordem_id)
         .where(Notificacao.usuario_id == user.id)
     )
+    if user.perfil != "ADMIN":
+        query = query.where(Ordem.solicitante_id == user.id)
+    total = session.exec(
+        select(func.count()).select_from(query.where(Notificacao.lida_em.is_(None)).subquery())
+    ).one()
     if somente_nao_lidas:
         query = query.where(Notificacao.lida_em.is_(None))
     filtrado = session.exec(select(func.count()).select_from(query.subquery())).one()
@@ -62,9 +61,16 @@ def listar(session: Session, user: Usuario, somente_nao_lidas: bool, offset: int
 
 
 def marcar_lida(session: Session, ident: int, user: Usuario):
+    permitidas = select(Ordem.id)
+    if user.perfil != "ADMIN":
+        permitidas = permitidas.where(Ordem.solicitante_id == user.id)
     result = session.exec(
         update(Notificacao)
-        .where(Notificacao.id == ident, Notificacao.usuario_id == user.id)
+        .where(
+            Notificacao.id == ident,
+            Notificacao.usuario_id == user.id,
+            Notificacao.ordem_id.in_(permitidas),
+        )
         .values(lida_em=func.coalesce(Notificacao.lida_em, now_utc()))
     )
     if result.rowcount != 1:

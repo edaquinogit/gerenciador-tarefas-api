@@ -8,15 +8,14 @@ from frontend.session import logout, persist_state, recover_session, sync_sessio
 from frontend.views.admin import render_admin
 from frontend.views.avisos import render_avisos
 from frontend.views.conta import render_conta
-from frontend.views.ordens import render_ordens
+from frontend.views.ordens import abrir_detalhes, render_ordens
 from frontend.views.painel import render_painel
+from frontend.views.visual import aplicar_estilo
 
 load_dotenv()
 service = TaskService(os.getenv("API_URL", "http://127.0.0.1:8000"))
 st.set_page_config(page_title="Gerenciador de Tarefas", page_icon="📋", layout="centered")
-st.html(
-    '<style>[data-testid="stMainBlockContainer"] {padding-top:2rem; padding-bottom:2rem;} h1 {font-size:clamp(1.65rem,3vw,2.2rem) !important; line-height:1.2 !important;} h2 {font-size:1.5rem !important;} h3 {font-size:1.15rem !important;}</style>'
-)
+aplicar_estilo()
 
 
 if os.getenv("PILOT_MODE") == "true":
@@ -75,8 +74,8 @@ def main():
 
     st.set_page_config(layout="wide")
     if user["perfil"] == "ADMIN":
-        if st.button("Todas as tarefas", key="abrir_painel", type="primary"):
-            st.session_state["pagina_principal"] = "Todas as tarefas"
+        if st.button("Painel de produção", key="abrir_painel", type="primary"):
+            st.session_state["pagina_principal"] = "Painel de produção"
 
     with st.sidebar:
         st.markdown("### Produção e tarefas")
@@ -91,12 +90,12 @@ def main():
         }
         if user["perfil"] == "FUNCIONARIO":
             st.caption(f"Setor: {nomes.get(user['setor'], 'Aguardando definição')}")
-        options = ["Minhas tarefas", "Minha conta"]
+        options = ["Minha conta"]
         if user["perfil"] == "ADMIN" or user["setor"] in nomes:
             options.insert(0, "Ordens de produção")
         if user["perfil"] == "ADMIN":
             options.insert(0, "Funcionários e setores")
-            options.append("Todas as tarefas")
+            options.append("Painel de produção")
         if st.session_state.get("pagina_principal") not in options:
             st.session_state["pagina_principal"] = options[0]
         page = st.radio("Menu", options, key="pagina_principal")
@@ -113,75 +112,18 @@ def main():
     if user["perfil"] == "ADMIN" or user["setor"] in nomes:
         render_avisos(service, token, report_error)
 
-    if page == "Todas as tarefas" and user["perfil"] == "ADMIN":
-        render_painel(service, token, report_error)
-        st.stop()
-
-    if page == "Ordens de produção":
+    if page == "Painel de produção" and user["perfil"] == "ADMIN":
+        render_painel(service, token, user, report_error)
+    elif page == "Ordens de produção":
         render_ordens(service, token, user, report_error)
-        st.stop()
-    if page == "Funcionários e setores":
+    elif page == "Funcionários e setores":
         render_admin(service, token, report_error)
-        st.stop()
-    if page == "Minha conta":
+    elif page == "Minha conta":
         render_conta(service, token, user, report_error)
-        st.stop()
     if user["perfil"] == "FUNCIONARIO" and not user["setor"]:
         st.warning("Seu setor ainda não foi definido. Solicite a classificação ao administrador.")
-
-    st.title("Minhas tarefas")
-    st.caption("O administrador também pode acompanhar estas tarefas no painel geral.")
-    try:
-        tarefas = service.listar(token)
-    except APIError as error:
-        report_error(error)
-        if st.button("Tentar novamente"):
-            st.rerun()
-        st.stop()
-
-    with st.expander("Nova tarefa"):
-        with st.form("nova_tarefa"):
-            titulo = st.text_input("Título", max_chars=200)
-            prioridade = st.selectbox("Prioridade", ["Baixa", "Média", "Alta"], index=1)
-            if st.form_submit_button("Adicionar"):
-                if not titulo.strip():
-                    st.error("Informe o título da tarefa.")
-                else:
-                    try:
-                        service.criar(titulo.strip(), prioridade, token)
-                        st.session_state.flash = "Tarefa criada."
-                        st.rerun()
-                    except APIError as error:
-                        report_error(error)
-
-    if not tarefas:
-        st.info("Nenhuma tarefa cadastrada.")
-    else:
-        concluidas = sum(t["concluido"] for t in tarefas)
-        st.progress(concluidas / len(tarefas))
-        st.caption(f"{concluidas} de {len(tarefas)} tarefas concluídas")
-        for tarefa in tarefas:
-            with st.container(border=True):
-                st.text(tarefa["titulo"])
-                st.caption(
-                    f"{tarefa['prioridade']} • {'Concluída' if tarefa['concluido'] else 'Pendente'}"
-                )
-                if not tarefa["concluido"] and st.button("Concluir", key=f"done_{tarefa['id']}"):
-                    try:
-                        service.concluir(tarefa["id"], token)
-                        st.session_state.flash = "Tarefa concluída."
-                        st.rerun()
-                    except APIError as error:
-                        report_error(error)
-                with st.expander("Excluir tarefa"):
-                    st.caption("Esta exclusão é permanente.")
-                    if st.button("Confirmar exclusão", key=f"delete_{tarefa['id']}"):
-                        try:
-                            service.deletar(tarefa["id"], token)
-                            st.session_state.flash = "Tarefa excluída."
-                            st.rerun()
-                        except APIError as error:
-                            report_error(error)
+    if ident := st.session_state.get("ordem_detalhe"):
+        abrir_detalhes(service, token, report_error, ident)
 
 
 try:
