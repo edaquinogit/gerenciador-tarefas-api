@@ -167,9 +167,7 @@ def test_f5_draft_logout_and_small_screen(live_app):
             expect(
                 page.get_by_role("heading", name="Ordens de produção", exact=True)
             ).to_be_visible()
-            expect(
-                page.get_by_role("radio", name="Ordens de produção", exact=True)
-            ).to_be_checked()
+            expect(page.get_by_role("radio", name="Ordens de produção", exact=True)).to_be_checked()
             assert len(requests.get(API + "/ordens", headers=headers, timeout=5).json()) == 1
             expect(
                 page.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)
