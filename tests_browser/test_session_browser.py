@@ -168,7 +168,7 @@ def test_f5_draft_logout_and_small_screen(live_app):
                 page.get_by_role("heading", name="Ordens de produção", exact=True)
             ).to_be_visible()
             assert len(requests.get(API + "/ordens", headers=headers, timeout=5).json()) == 1
-            expect(page.get_by_text("#1 — Toalha de ensaio", exact=True)).to_be_visible()
+            expect(page.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)).to_be_visible()
             page.screenshot(path=str(OUTPUT / "desktop.png"), full_page=True, animations="disabled")
             mobile_context = browser.new_context(
                 viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
@@ -179,7 +179,7 @@ def test_f5_draft_logout_and_small_screen(live_app):
             expect(
                 mobile.get_by_role("heading", name="Ordens de produção", exact=True)
             ).to_be_visible(timeout=20000)
-            expect(mobile.get_by_text("#1 — Toalha de ensaio", exact=True)).to_be_visible()
+            expect(mobile.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)).to_be_visible()
             mobile.screenshot(
                 path=str(OUTPUT / "mobile.png"), full_page=True, animations="disabled"
             )
