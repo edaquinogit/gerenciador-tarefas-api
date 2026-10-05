@@ -69,9 +69,14 @@ def test_browser_endpoints_reject_missing_csrf_or_untrusted_origin(client, heade
         assert client.post(f"/sessoes/{path}", headers=headers).status_code == 403
 
 
-def test_absolute_expiry_and_password_change_invalidate_restore(client, user_factory):
+def test_absolute_expiry_and_password_change_invalidate_restore(
+    client, user_factory, admin_headers
+):
     login, _ = browser_login(client, user_factory)
     headers = {"Authorization": f"Bearer {login['access_token']}"}
+    from tests.test_autorizacoes_senha import autorizar
+
+    autorizar(client, headers, admin_headers)
     assert (
         client.post(
             "/usuarios/me/senha",

@@ -8,7 +8,7 @@ def painel(monkeypatch, client, headers):
     app = app_with_api(monkeypatch, client)
     app.session_state.access_token = headers["Authorization"].removeprefix("Bearer ")
     app.run()
-    labeled(app.button, "Todas as tarefas").click().run()
+    labeled(app.button, "Painel de produção").click().run()
     assert not app.exception
     return app
 
@@ -55,29 +55,24 @@ def test_order_page_validates_queries(client, admin_headers, params):
     assert client.get("/ordens/pagina", headers=admin_headers, params=params).status_code == 422
 
 
-def test_panel_recovers_page_when_tasks_disappear(monkeypatch, client, admin_headers):
+def test_panel_recovers_page_when_orders_leave_filter(monkeypatch, client, admin_headers):
     for index in range(21):
-        client.post("/tarefas", headers=admin_headers, json={"titulo": f"Tarefa {index}"})
+        client.post("/ordens", headers=admin_headers, json=payload(produto=f"Lote {index}"))
     app = painel(monkeypatch, client, admin_headers)
-    assert app.button(key="painel_tarefas_pagina_anterior").disabled
-    assert not app.button(key="painel_tarefas_pagina_proxima").disabled
-    first_ids = set(app.dataframe[0].value["ID"])
-    app.button(key="painel_tarefas_pagina_proxima").click().run()
-    assert not app.exception
-    remaining = int(app.dataframe[0].value.iloc[0]["ID"])
-    assert remaining not in first_ids
-    assert app.button(key="painel_tarefas_pagina_proxima").disabled
-    client.delete(f"/tarefas/{remaining}", headers=admin_headers)
+    labeled(app.selectbox, "Situação").select("ativas").run()
+    app.button(key="painel_ordens_pagina_proxima").click().run()
+    assert app.session_state["painel_ordens_pagina"] == 2
+    last = client.get("/ordens", headers=admin_headers, params={"offset": 20}).json()[0]
+    client.post(
+        f"/ordens/{last['id']}/cancelamento",
+        headers=admin_headers,
+        json=comando(last["versao"], motivo="Teste de paginação"),
+    )
     labeled(app.button, "Atualizar agora").click().run()
     assert not app.exception and not app.error
-    assert app.session_state["painel_tarefas_pagina"] == 1
-    assert len(app.dataframe[0].value) == 20
-    assert any("Página 1 de 1 • 20 registros" in c.value for c in app.caption)
-    assert app.button(key="painel_tarefas_pagina_anterior").disabled
-    assert app.button(key="painel_tarefas_pagina_proxima").disabled
-    labeled(app.selectbox, "Situação das tarefas").select("Concluídas").run()
-    assert any("0 registros" in c.value for c in app.caption)
-    assert app.button(key="painel_tarefas_pagina_proxima").disabled
+    assert app.session_state["painel_ordens_pagina"] == 1
+    assert len([e for e in app.button if str(e.key).startswith("abrir_ordem_")]) == 20
+    assert app.button(key="painel_ordens_pagina_proxima").disabled
 
 
 def test_orders_recover_after_cancel_and_clamp_stale_page(monkeypatch, client, admin_headers):
@@ -112,7 +107,7 @@ def test_urgent_other_category_is_before_normal_bedding(monkeypatch, client, adm
         )
     app = painel(monkeypatch, client, admin_headers)
     labeled(app.radio, "Menu").set_value("Ordens de produção").run()
-    titles = [e.value for e in app.markdown if e.value.startswith("**#")]
+    titles = [e.label for e in app.button if str(e.key).startswith("abrir_ordem_")]
     assert "Toalha urgente" in titles[0] and "Lençol normal" in titles[1]
-    assert app.subheader[0].value == "Urgentes — 1 nesta página"
+    assert any("URGENTE" in e.value for e in app.markdown)
     assert len(titles) == 2

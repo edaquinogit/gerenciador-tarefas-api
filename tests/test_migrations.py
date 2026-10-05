@@ -30,6 +30,7 @@ def test_fresh_database_and_no_schema_drift(tmp_path):
         "notificacao",
         "alembic_version",
         "sessao",
+        "autorizacaosenha",
     }
     result = run("-m", "alembic", "check", url=url)
     assert result.returncode == 0, result.stdout + result.stderr
@@ -248,7 +249,41 @@ def test_v6_preserves_orders_history_and_notifications(tmp_path):
                 assert after.pop("categoria") == "OUTROS"
             assert after == before[table]
         assert not conn.exec_driver_sql("PRAGMA foreign_key_check").all()
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0007"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0008"
     engine.dispose()
     assert run("-m", "alembic", "check", url=url).returncode == 0
     assert run("-m", "alembic", "downgrade", "0005", url=url).returncode != 0
+
+
+def test_v8_backfills_missing_requester_notice_preserves_read_and_legacy_data(tmp_path):
+    url = f"sqlite:///{tmp_path / 'v8.db'}"
+    seed_v4(url)
+    assert run("-m", "alembic", "upgrade", "0007", url=url).returncode == 0
+    engine = build_engine(url)
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO usuario (id, username, password_hash, is_active, perfil, setor, token_version) VALUES (2, 'solicitante', 'hash', 1, 'FUNCIONARIO', 'SOLICITACAO', 0)"
+            )
+        )
+        conn.execute(text("UPDATE ordem SET solicitante_id=2 WHERE id=1"))
+        old_notice = dict(
+            conn.execute(text("SELECT * FROM notificacao WHERE id=1")).mappings().one()
+        )
+    result = run("-m", "alembic", "upgrade", "head", url=url)
+    assert result.returncode == 0, result.stderr
+    with engine.connect() as conn:
+        assert (
+            dict(conn.execute(text("SELECT * FROM notificacao WHERE id=1")).mappings().one())
+            == old_notice
+        )
+        created = conn.execute(
+            text("SELECT ordem_id, usuario_id, lida_em FROM notificacao WHERE usuario_id=2")
+        ).one()
+        assert created == (1, 2, None)
+        assert conn.execute(text("SELECT count(*) FROM tarefa")).scalar() == 1
+        assert not conn.exec_driver_sql("PRAGMA foreign_key_check").all()
+    assert run("-m", "alembic", "upgrade", "head", url=url).returncode == 0
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM notificacao")).scalar() == 2
+    engine.dispose()

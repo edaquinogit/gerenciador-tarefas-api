@@ -51,34 +51,30 @@ def test_header_opens_panel_and_refresh_sees_other_sector_changes(monkeypatch, c
     app = app_with_api(monkeypatch, client)
     app.session_state.access_token = setores["ADMIN"]["Authorization"].removeprefix("Bearer ")
     app.run()
-    labeled(app.button, "Todas as tarefas").click().run()
+    labeled(app.button, "Painel de produção").click().run()
     assert not app.exception
-    assert app.title[0].value == "Todas as tarefas"
-    assert app.dataframe[0].value.iloc[0]["Etapa"] == "Pendente"
-    assert app.dataframe[1].value.iloc[0]["Pessoa"] == "producao"
+    assert app.title[0].value == "Painel de produção"
+    assert any("Pendente" in e.value for e in app.markdown)
+    assert not app.dataframe
+    assert "Minhas tarefas" not in app.radio[0].options
     avancar(client, order, setores["PRODUCAO"], "CORTANDO")
     client.patch(f"/tarefas/{task['id']}/concluir", headers=setores["PRODUCAO"])
     labeled(app.button, "Atualizar agora").click().run()
     assert not app.exception
-    assert app.dataframe[0].value.iloc[0]["Etapa"] == "Cortando"
-    assert app.dataframe[1].value.iloc[0]["Situação"] == "Concluída"
+    assert any("Cortando" in e.value for e in app.markdown)
     for situacao in ("ativas", "coletadas", "canceladas", "todas"):
-        labeled(app.selectbox, "Situação das ordens").select(situacao).run()
+        labeled(app.selectbox, "Situação").select(situacao).run()
         assert not app.exception and not app.error
-    labeled(app.selectbox, "Etapa da produção").select("CORTANDO").run()
-    assert not app.error and len(app.dataframe[0].value) == 1
-    # A troca de filtro volta à primeira página para não esconder resultados.
-    app.session_state["painel_tarefas_pagina"] = 2
-    labeled(app.selectbox, "Situação das tarefas").select("Concluídas").run()
-    assert app.session_state["painel_tarefas_pagina"] == 1
-    assert len(app.dataframe[1].value) == 1
+    app.session_state["painel_ordens_pagina"] = 2
+    labeled(app.selectbox, "Categoria").select("OUTROS").run()
+    assert app.session_state["painel_ordens_pagina"] == 1
     monkeypatch.setattr(
-        TaskService, "todas_tarefas", Mock(side_effect=APIError("Falha ao consultar tarefas"))
+        TaskService, "pagina_ordens", Mock(side_effect=APIError("Falha ao consultar ordens"))
     )
     labeled(app.button, "Atualizar agora").click().run()
     assert not app.exception
-    assert any("Falha ao consultar tarefas" in e.value for e in app.error)
-    assert not any("Nenhuma tarefa" in e.value for e in app.info)
+    assert any("Falha ao consultar ordens" in e.value for e in app.error)
+    assert not any("Nenhuma ordem" in e.value for e in app.info)
 
 
 def test_employee_has_no_global_panel_button(monkeypatch, client, user_factory):
@@ -87,5 +83,5 @@ def test_employee_has_no_global_panel_button(monkeypatch, client, user_factory):
     app.session_state.access_token = headers["Authorization"].removeprefix("Bearer ")
     app.run()
     assert not app.exception
-    assert "Todas as tarefas" not in app.radio[0].options
-    assert all(button.label != "Todas as tarefas" for button in app.button)
+    assert "Painel de produção" not in app.radio[0].options
+    assert all(button.label != "Painel de produção" for button in app.button)

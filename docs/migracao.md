@@ -91,3 +91,8 @@ Para o ensaio `.pilot`, estes comandos comuns leem `.env` e **não devem ser usa
 ## Upgrade para sessões (0007)
 
 Pare API e Streamlit, execute `python -m backend.scripts.backup_sqlite` e só prossiga após sucesso. Execute `python -m alembic upgrade head` e `python -m alembic check`. A migração cria `sessao`, preservando usuários, ordens, tarefas, histórico e avisos. Tokens antigos exigem novo login. Reinicie os dois serviços. Configuração do cookie, LAN/HTTPS e comandos completos em [sessões e experiência](sessoes-experiencia.md).
+
+
+## Upgrade para regras operacionais (0008)
+
+Cria `autorizacaosenha` e recupera avisos ausentes de conclusões existentes, sem apagar registros. Pare serviços, faça backup e siga [regras operacionais](regras-operacionais.md). Avisos antigos da coleta são filtrados na API. Não converte tarefas pessoais em ordens.

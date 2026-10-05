@@ -39,7 +39,7 @@ Estoque completo, financeiro, etiquetas, integrações com marketplaces e mensag
 
 ## Próximo passo de aceite
 
-Atualizar a instalação para 0007 com backup, completar telefone do administrador e cadastrar um funcionário de cada setor. Executar o roteiro docs/piloto.md com dados fictícios, verificar o painel administrativo durante mudanças feitas por outra pessoa e registrar falhas/tempos observados. Só depois desse aceite avançar para a preparação operacional; a passagem dos testes automatizados não substitui o teste na empresa.
+Atualizar a instalação para 0008 com backup, completar telefone do administrador e cadastrar um funcionário de cada setor. Executar o roteiro docs/piloto.md com dados fictícios, verificar o painel administrativo durante mudanças feitas por outra pessoa e registrar falhas/tempos observados. Só depois desse aceite avançar para a preparação operacional; a passagem dos testes automatizados não substitui o teste na empresa.
 
 
 ## Categorias — implementado
@@ -50,3 +50,8 @@ Classificação automática, agrupamento visual e filtro antes da paginação; p
 ## Continuidade de uso — implementada na versão 2.6
 
 Sessões revogáveis com recuperação após F5, renovação limitada, restauração de navegação e rascunho de nova ordem, paginação dos avisos e tema consistente. Migração 0007. Consulte [sessões e experiência](sessoes-experiencia.md). O próximo marco continua sendo o aceite presencial entre setores, incluindo refresh, rede e logout nos dispositivos reais.
+
+
+## Operação por ordens — versão 2.7
+
+Interface sem tarefas pessoais, avisos privados recuperados na migração 0008, autorização individual de senha pelo ADM, cards por prioridade/prazo e filtros compactos. Critérios de aceite em [regras operacionais](regras-operacionais.md).

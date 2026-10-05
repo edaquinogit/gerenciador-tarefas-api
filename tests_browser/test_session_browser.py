@@ -167,8 +167,11 @@ def test_f5_draft_logout_and_small_screen(live_app):
             expect(
                 page.get_by_role("heading", name="Ordens de produção", exact=True)
             ).to_be_visible()
+            expect(page.get_by_role("radio", name="Ordens de produção", exact=True)).to_be_checked()
             assert len(requests.get(API + "/ordens", headers=headers, timeout=5).json()) == 1
-            expect(page.get_by_text("#1 — Toalha de ensaio", exact=True)).to_be_visible()
+            expect(
+                page.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)
+            ).to_be_visible()
             page.screenshot(path=str(OUTPUT / "desktop.png"), full_page=True, animations="disabled")
             mobile_context = browser.new_context(
                 viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
@@ -179,11 +182,24 @@ def test_f5_draft_logout_and_small_screen(live_app):
             expect(
                 mobile.get_by_role("heading", name="Ordens de produção", exact=True)
             ).to_be_visible(timeout=20000)
-            expect(mobile.get_by_text("#1 — Toalha de ensaio", exact=True)).to_be_visible()
+            expect(
+                mobile.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)
+            ).to_be_visible()
             mobile.screenshot(
                 path=str(OUTPUT / "mobile.png"), full_page=True, animations="disabled"
             )
             assert mobile.locator("body").evaluate("e => e.scrollWidth <= window.innerWidth + 1")
+            pills = mobile.locator('[class*="st-key-filtros_"] [role="radiogroup"]')
+            assert pills.evaluate("e => e.scrollWidth > e.clientWidth")
+            mobile.get_by_role("button", name="#1 — Toalha de ensaio", exact=True).click()
+            expect(
+                mobile.get_by_role("dialog").get_by_text("Branca 70x140", exact=True)
+            ).to_be_visible()
+            mobile.screenshot(path=str(OUTPUT / "mobile-dialog.png"), full_page=True)
+            mobile.get_by_role("dialog").get_by_role(
+                "button", name="Fechar detalhes", exact=True
+            ).click()
+            expect(mobile.get_by_role("dialog")).to_have_count(0)
             mobile_context.close()
             # JWT de 1 minuto: navegador deve renovar sem estender a sessão máxima.
             for _ in range(75):
@@ -195,8 +211,10 @@ def test_f5_draft_logout_and_small_screen(live_app):
                 time.sleep(1)
             else:
                 pytest.fail("Token curto não expirou no período esperado")
-            page.get_by_role("button", name="Todas as tarefas", exact=True).click()
-            expect(page.get_by_role("heading", name="Todas as tarefas", exact=True)).to_be_visible()
+            page.get_by_role("button", name="Painel de produção", exact=True).click()
+            expect(
+                page.get_by_role("heading", name="Painel de produção", exact=True)
+            ).to_be_visible()
             renewed = context.request.post(
                 API + "/sessoes/restaurar", headers={"Origin": BASE, "X-Session-Request": "1"}
             ).json()
@@ -211,6 +229,137 @@ def test_f5_draft_logout_and_small_screen(live_app):
         except Exception:
             page.screenshot(path=str(OUTPUT / "failure.png"), full_page=True)
             (OUTPUT / "page.html").write_text(page.content())
+            raise
+        finally:
+            browser.close()
+
+
+def test_ready_notice_privacy_and_password_approval(live_app):
+    """Duas caixas independentes; entrega por polling e liberação sem F5."""
+    from datetime import datetime, timedelta, timezone
+    from uuid import uuid4
+
+    password = secrets.token_urlsafe(18)
+
+    def api(username, secret, method, path, **kwargs):
+        login = requests.post(
+            API + "/token", data={"username": username, "password": secret}, timeout=10
+        )
+        login.raise_for_status()
+        response = requests.request(
+            method,
+            API + path,
+            headers={"Authorization": "Bearer " + login.json()["access_token"]},
+            timeout=10,
+            **kwargs,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    for name, sector in [
+        ("pedido_a", "SOLICITACAO"),
+        ("pedido_b", "SOLICITACAO"),
+        ("corte", "PRODUCAO"),
+        ("coleta", "COLETA_EMBALAGEM"),
+    ]:
+        api(
+            "ensaio",
+            live_app,
+            "POST",
+            "/admin/funcionarios",
+            json={
+                "username": name,
+                "telefone": "79999990001",
+                "password": password,
+                "setor": sector,
+            },
+        )
+    order = api(
+        "pedido_a",
+        password,
+        "POST",
+        "/ordens",
+        json={
+            "request_id": str(uuid4()),
+            "produto": "Capa urgente",
+            "especificacao": "Azul 3 lugares",
+            "quantidade": 20,
+            "unidade": "pecas",
+            "prioridade": "URGENTE",
+            "prazo": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+            "observacao": "Lote de teste",
+        },
+    )
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(executable_path=shutil.which("google-chrome"))
+        context = browser.new_context(viewport={"width": 1440, "height": 1000})
+        admin_context = browser.new_context(viewport={"width": 1440, "height": 1000})
+        page, admin = context.new_page(), admin_context.new_page()
+        page.set_default_timeout(20000)
+        admin.set_default_timeout(20000)
+
+        def enter(page, name, secret):
+            page.goto(BASE)
+            page.get_by_label("Usuário", exact=True).fill(name)
+            page.get_by_label("Senha", exact=True).fill(secret)
+            page.get_by_role("button", name="Entrar", exact=True).click()
+            expect(page.get_by_role("button", name="Sair", exact=True)).to_be_visible()
+
+        try:
+            enter(page, "pedido_a", password)
+            expect(page.get_by_text("Minhas tarefas", exact=True)).to_have_count(0)
+            expect(page.get_by_text("Avisos não lidos: 0", exact=True)).to_be_visible()
+            for status in ("CORTANDO", "COSTURANDO", "PRONTO"):
+                order = api(
+                    "corte",
+                    password,
+                    "PATCH",
+                    f"/ordens/{order['id']}/etapa",
+                    json={"request_id": str(uuid4()), "versao": order["versao"], "status": status},
+                )
+            expect(page.get_by_text("Avisos não lidos: 1", exact=True)).to_be_visible(timeout=20000)
+            expect(
+                page.get_by_text("Disponível para coleta e embalagem.", exact=True)
+            ).to_be_visible()
+            page.get_by_role("button", name="Abrir ordem", exact=True).click()
+            dialog = page.get_by_role("dialog")
+            expect(dialog.get_by_text("Azul 3 lugares", exact=True)).to_be_visible()
+            expect(dialog.get_by_role("button", name="Marcar lote pronto")).to_have_count(0)
+            page.screenshot(
+                path=str(OUTPUT / "ready-dialog.png"), full_page=True, animations="disabled"
+            )
+            dialog.get_by_role("button", name="Fechar detalhes", exact=True).click()
+            expect(page.get_by_role("dialog")).to_have_count(0)
+            for username in ("pedido_b", "corte", "coleta"):
+                assert api(username, password, "GET", "/notificacoes")["total"] == 0
+            page.get_by_text("Minha conta", exact=True).click()
+            expect(page.get_by_label("Nova senha", exact=True)).to_have_count(0)
+            page.get_by_role("button", name="Solicitar alteração de senha", exact=True).click()
+            expect(
+                page.get_by_text(
+                    "Solicitação enviada. Aguardando autorização do administrador.", exact=True
+                )
+            ).to_be_visible()
+            enter(admin, "ensaio", live_app)
+            admin.get_by_role("radio", name="Funcionários e setores", exact=True).check()
+            admin.get_by_role("button", name="Permitir troca", exact=True).click()
+            expect(page.get_by_label("Nova senha", exact=True)).to_be_visible(timeout=20000)
+            new_password = secrets.token_urlsafe(18)
+            page.get_by_label("Senha atual", exact=True).fill(password)
+            page.get_by_label("Nova senha", exact=True).fill(new_password)
+            page.get_by_label("Confirme a nova senha", exact=True).fill(new_password)
+            page.get_by_role("button", name="Alterar minha senha", exact=True).click()
+            expect(page.get_by_role("button", name="Entrar", exact=True)).to_be_visible()
+            enter(page, "pedido_a", new_password)
+            page.get_by_text("Minha conta", exact=True).click()
+            expect(page.get_by_label("Nova senha", exact=True)).to_have_count(0)
+            assert (
+                api("pedido_a", new_password, "GET", "/usuarios/me/autorizacao-senha")["status"]
+                == "UTILIZADA"
+            )
+        except Exception:
+            page.screenshot(path=str(OUTPUT / "rules-failure.png"), full_page=True)
+            admin.screenshot(path=str(OUTPUT / "rules-admin-failure.png"), full_page=True)
             raise
         finally:
             browser.close()

@@ -19,7 +19,7 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
         if owned_engine:
             engine.dispose()
 
-    app = FastAPI(title=settings.PROJECT_NAME, version="2.6.0", lifespan=lifespan)
+    app = FastAPI(title=settings.PROJECT_NAME, version="2.7.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.engine = engine
     if settings.CORS_ORIGINS or settings.BROWSER_ORIGINS:

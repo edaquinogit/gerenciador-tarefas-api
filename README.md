@@ -2,19 +2,19 @@
 
 Aplicação Python com **FastAPI**, **Streamlit** e **SQLModel**. O sistema conecta solicitação, corte, costura e coleta, com acompanhamento administrativo e um ambiente separado para ensaios.
 
-**Disponível agora:** sessão recuperável após F5, logout com revogação, restauração de navegação/rascunho de ordem, paginação limitada também nos avisos, tema visual unificado, classificação e agrupamento de ordens por categoria, cadastro por telefone com DDD, painel global do administrador com atualização a cada 10 segundos, administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos automáticos de produtos prontos e tarefas pessoais. Inclui gestão de contas, troca de senhas, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações administrativas de conta e trocas de senha revogam sessões anteriores; atualizar o próprio telefone mantém a sessão.
+**Disponível agora:** sessão recuperável após F5, logout com revogação, restauração de navegação/rascunho de ordem, paginação limitada também nos avisos, tema visual unificado, cards por prioridade e prazo, filtros compactos por etapa/categoria, cadastro por telefone com DDD, painel global do administrador com atualização a cada 10 segundos, administrador e funcionários, setores, ordens compartilhadas, corte/costura/pronto, confirmação de coleta, cancelamento com justificativa, histórico, avisos privados de produtos prontos para solicitante e ADM. Inclui gestão de contas, troca de senha de funcionários mediante autorização individual do ADM, JWT, migrações e testes. Usuários inativos não conseguem entrar nem reutilizar tokens. Alterações administrativas de conta e trocas de senha revogam sessões anteriores; atualizar o próprio telefone mantém a sessão.
 
-**Ainda não implementado:** avisos externos (WhatsApp/e-mail/push), atualização periódica da tela operacional de ordens, lotes parciais e edição/reabertura de ordens. O painel **Todas as tarefas** do administrador e a central de avisos se atualizam a cada 10 segundos com sessão ativa. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md), [os avisos](docs/avisos.md) e [o plano de evolução](docs/plano-producao.md).
+**Ainda não implementado:** avisos externos (WhatsApp/e-mail/push), atualização periódica da tela operacional de ordens, lotes parciais e edição/reabertura de ordens. O painel **Painel de produção** do administrador e a central de avisos se atualizam a cada 10 segundos com sessão ativa. Esta versão ainda não deve ser usada como controle da produção da empresa. Veja [o guia de ordens](docs/ordens.md), [os avisos](docs/avisos.md) e [o plano de evolução](docs/plano-producao.md).
 
 ## Ensaio entre setores
 
 Para testar com quatro contas, banco separado e inicialização em um único terminal, siga [o roteiro prático](docs/piloto.md). A branch `main` reúne as etapas anteriores para esse ensaio.
 
-Veja [sessões e experiência de uso](docs/sessoes-experiencia.md) para a migração **0007**, backup, configuração de rede e comandos Windows atualizados.
+Veja [sessões e experiência de uso](docs/sessoes-experiencia.md) para configuração de rede; veja [regras operacionais](docs/regras-operacionais.md) para a migração **0008**, backup, configuração de rede e comandos Windows atualizados.
 
 ## Atualização de uma instalação existente
 
-A versão 2.6 acrescenta sessões persistentes e exige a migração **0007**. Pare os serviços, faça backup, aplique `alembic upgrade head` e reinicie API e interface. Será necessário entrar novamente uma vez após a atualização. Não recrie o administrador existente. Siga [o passo a passo](docs/sessoes-experiencia.md).
+A versão 2.7 acrescenta autorização de senha, avisos privados e cards e exige a migração **0008**. Pare os serviços, faça backup, aplique `alembic upgrade head` e reinicie API e interface. Será necessário entrar novamente uma vez após a atualização. Não recrie o administrador existente. Siga [o passo a passo](docs/sessoes-experiencia.md).
 
 ## Executar localmente
 

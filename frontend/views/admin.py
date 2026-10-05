@@ -1,11 +1,13 @@
 import streamlit as st
 
 from frontend.services.task_service import APIError
+from frontend.views.ordens import horario
 from shared.telefone import normalizar_telefone
 
 
 def render_admin(service, token, report_error):
     st.title("Funcionários e setores")
+    render_autorizacoes(service, token, report_error)
     try:
         setores = service.setores(token)
         funcionarios = service.funcionarios(token)
@@ -121,6 +123,7 @@ def render_admin(service, token, report_error):
                             st.error(str(error))
                         except APIError as error:
                             report_error(error)
+
             with st.form(f"senha_{ident}", clear_on_submit=True):
                 password = st.text_input("Nova senha", type="password")
                 confirm = st.text_input("Confirme a nova senha", type="password")
@@ -138,3 +141,41 @@ def render_admin(service, token, report_error):
                             st.rerun()
                         except APIError as error:
                             report_error(error)
+
+
+@st.fragment(run_every="10s")
+def render_autorizacoes(service, token, report_error):
+    try:
+        pedidos = service.autorizacoes_senha(token)
+    except APIError as error:
+        report_error(error)
+        return
+    pendentes = [p for p in pedidos if p["status"] in {"PENDENTE", "AUTORIZADA"}]
+    with st.expander(
+        f"Autorizações de senha · {len(pendentes)} em aberto", expanded=bool(pendentes)
+    ):
+        st.caption("Cada liberação vale por 30 minutos e permite uma única troca de senha.")
+        if not pendentes:
+            st.caption("Nenhuma solicitação em aberto.")
+        for pedido in pendentes:
+            ident = pedido["usuario_id"]
+            st.text(f"{pedido['username']} · {pedido['status'].title()}")
+            if pedido["status"] == "AUTORIZADA":
+                st.caption(f"Válida até {horario(pedido['expira_em'])}")
+            cols = st.columns(2)
+            acao = None
+            if pedido["status"] == "PENDENTE" and cols[0].button(
+                "Permitir troca", key=f"permitir_senha_{ident}"
+            ):
+                acao = True
+            if cols[1].button(
+                "Revogar" if pedido["status"] == "AUTORIZADA" else "Recusar",
+                key=f"recusar_senha_{ident}",
+            ):
+                acao = False
+            if acao is not None:
+                try:
+                    service.decidir_senha(ident, acao, pedido["versao"], token)
+                    st.rerun()
+                except APIError as error:
+                    report_error(error)
