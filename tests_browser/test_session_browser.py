@@ -167,8 +167,13 @@ def test_f5_draft_logout_and_small_screen(live_app):
             expect(
                 page.get_by_role("heading", name="Ordens de produção", exact=True)
             ).to_be_visible()
+            expect(
+                page.get_by_role("radio", name="Ordens de produção", exact=True)
+            ).to_be_checked()
             assert len(requests.get(API + "/ordens", headers=headers, timeout=5).json()) == 1
-            expect(page.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)).to_be_visible()
+            expect(
+                page.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)
+            ).to_be_visible()
             page.screenshot(path=str(OUTPUT / "desktop.png"), full_page=True, animations="disabled")
             mobile_context = browser.new_context(
                 viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
@@ -179,7 +184,9 @@ def test_f5_draft_logout_and_small_screen(live_app):
             expect(
                 mobile.get_by_role("heading", name="Ordens de produção", exact=True)
             ).to_be_visible(timeout=20000)
-            expect(mobile.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)).to_be_visible()
+            expect(
+                mobile.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)
+            ).to_be_visible()
             mobile.screenshot(
                 path=str(OUTPUT / "mobile.png"), full_page=True, animations="disabled"
             )
@@ -320,7 +327,9 @@ def test_ready_notice_privacy_and_password_approval(live_app):
             dialog = page.get_by_role("dialog")
             expect(dialog.get_by_text("Azul 3 lugares", exact=True)).to_be_visible()
             expect(dialog.get_by_role("button", name="Marcar lote pronto")).to_have_count(0)
-            page.screenshot(path=str(OUTPUT / "ready-dialog.png"), full_page=True)
+            page.screenshot(
+                path=str(OUTPUT / "ready-dialog.png"), full_page=True, animations="disabled"
+            )
             dialog.get_by_role("button", name="Fechar detalhes", exact=True).click()
             expect(page.get_by_role("dialog")).to_have_count(0)
             for username in ("pedido_b", "corte", "coleta"):
