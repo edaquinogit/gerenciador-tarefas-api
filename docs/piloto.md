@@ -31,7 +31,7 @@ A pasta `.pilot` contém banco SQLite, configuração e `acessos.json` com quatr
 | `piloto_admin` | Administrador, acompanha tudo e gerencia funcionários |
 | `piloto_solicitacao` | Abre a ordem e recebe o aviso de pronto |
 | `piloto_producao` | Avança corte, costura e pronto |
-| `piloto_coleta` | Recebe o aviso e confirma a coleta do lote |
+| `piloto_coleta` | Consulta a fila de prontos e confirma a coleta do lote |
 
 Use computadores, perfis de navegador ou sessões independentes. Quatro abas compartilhando uma sessão não são uma boa simulação de quatro funcionários. Para testar com mais pessoas, o administrador deve cadastrar uma conta por pessoa.
 
@@ -100,11 +100,10 @@ Ctrl+C encerra os dois processos e preserva os dados. Para retomar, execute some
 - **Migração pendente ou banco incompatível:** o início verifica o schema e recusa continuar. Preserve a pasta e peça revisão; não aplique migrações no banco real para resolver o ensaio.
 - **Senha esquecida:** admin pode redefinir a senha do funcionário; `acessos.json` contém apenas as senhas iniciais. Se esquecer a senha administrativa, prepare um novo ensaio preservando o anterior.
 - **Sessão expirada:** entre novamente após o prazo máximo de 12 horas. Tokens curtos são renovados enquanto a sessão continua válida. F5 deve manter o login, conforme [o guia de sessões](sessoes-experiencia.md).
-- **Aviso não aparece:** mantenha aba ativa, atualize, confira destinatário/setor e se a etapa realmente ficou PRONTO. Avisos vão ao solicitante, administradores ativos e funcionários ativos de coleta existentes naquele momento.
+- **Aviso não aparece:** mantenha aba ativa, atualize, confira destinatário/setor e se a etapa realmente ficou PRONTO. Avisos vão somente ao solicitante ativo e aos administradores ativos. Coleta acompanha a fila de ordens prontas.
 - **“Coletada” some da fila:** selecione a situação correspondente; ordens encerradas não aparecem no filtro de ativas.
 
 Antes de usar dados reais, ainda são necessárias validação presencial da rede e dos dispositivos, política de backup com restauração testada, hospedagem protegida, definição de responsáveis e avaliação de concorrência/capacidade. Nenhuma implantação na empresa foi realizada por este PR.
-
 
 ## Ensaio automatizado e aceite presencial
 
