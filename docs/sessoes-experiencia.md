@@ -68,3 +68,5 @@ Substitua pelo IP do servidor; abra os serviços na interface da rede e libere s
 7. Simular API indisponível: mostrar erro e preservar dados ainda em memória, sem afirmar que a operação foi concluída.
 
 AppTest cobre a interface Python, mas não executa JavaScript. A CI também executa `tests_browser` com Chrome para validar o cookie, F5, rascunho, logout e largura reduzida, guardando capturas e logs em `browser-evidence`. Testes automatizados não substituem o ensaio nos aparelhos e na rede da empresa.
+
+A renovação periódica do token é isolada em um fragmento: ela não redesenha os campos ainda em edição. Os painéis, avisos e detalhes utilizam o token atualizado. Entrada, saída, recuperação ou mudança de usuário continuam reconstruindo a tela quando necessário.

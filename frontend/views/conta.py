@@ -31,6 +31,7 @@ def render_conta(service, token, user, report_error):
 
 @st.fragment(run_every="10s")
 def render_senha(service, token, user, report_error):
+    token = st.session_state.get("access_token", token)
     st.subheader("Alterar senha")
     if user["perfil"] != "ADMIN":
         try:

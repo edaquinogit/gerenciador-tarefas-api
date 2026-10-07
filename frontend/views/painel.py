@@ -11,6 +11,7 @@ from frontend.views.paginacao import carregar_pagina, render_paginacao
 
 @st.fragment(run_every="10s")
 def render_painel(service, token, user, report_error):
+    token = st.session_state.get("access_token", token)
     st.title("Painel de produção")
     st.caption("Todas as ordens entre setores · atualização automática a cada 10 segundos.")
     st.button("Atualizar agora", key="painel_atualizar")

@@ -97,6 +97,7 @@ def render_ordem(service, token, user, report_error, ordem, admin, setor):
 
 @st.dialog("Detalhes da ordem", width="large", on_dismiss=fechar_detalhes)
 def abrir_detalhes(service, token, report_error, ident):
+    token = st.session_state.get("access_token", token)
     try:
         user = service.me(token)
         ordem = service.detalhe_ordem(ident, token)
