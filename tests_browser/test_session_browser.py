@@ -413,7 +413,7 @@ def test_sector_pilot_automatic_queue_and_draft(live_app):
             ]
             admin.get_by_role("button", name="Painel de produção", exact=True).click()
             # Filtro escolhido deve sobreviver a atualizações recebidas de outro setor.
-            corte.get_by_role("radio", name="Pendente", exact=True).check()
+            corte.locator('[class*="st-key-filtros_"]').get_by_text("Pendente", exact=True).click()
             pedido.get_by_text("Nova ordem", exact=True).click()
             pedido.get_by_label("Produto", exact=True).fill("TESTE piloto entre setores")
             pedido.get_by_label("Produto", exact=True).press("Tab")
