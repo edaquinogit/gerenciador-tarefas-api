@@ -363,3 +363,125 @@ def test_ready_notice_privacy_and_password_approval(live_app):
             raise
         finally:
             browser.close()
+
+
+def test_sector_pilot_automatic_queue_and_draft(live_app):
+    """Solicitar, produzir e coletar pela UI em sessões independentes, sem F5."""
+    password = secrets.token_urlsafe(18)
+    login = requests.post(
+        API + "/token", data={"username": "ensaio", "password": live_app}, timeout=10
+    )
+    login.raise_for_status()
+    headers = {"Authorization": "Bearer " + login.json()["access_token"]}
+    for name, sector in [
+        ("piloto_pedido", "SOLICITACAO"),
+        ("piloto_corte", "PRODUCAO"),
+        ("piloto_coleta", "COLETA_EMBALAGEM"),
+    ]:
+        response = requests.post(
+            API + "/admin/funcionarios",
+            headers=headers,
+            timeout=10,
+            json={
+                "username": name,
+                "telefone": "79999990001",
+                "password": password,
+                "setor": sector,
+            },
+        )
+        response.raise_for_status()
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(executable_path=shutil.which("google-chrome"))
+        pages = {}
+        try:
+            for role, username, secret in [
+                ("pedido", "piloto_pedido", password),
+                ("corte", "piloto_corte", password),
+                ("coleta", "piloto_coleta", password),
+                ("admin", "ensaio", live_app),
+            ]:
+                page = browser.new_context(viewport={"width": 1440, "height": 1000}).new_page()
+                page.set_default_timeout(20000)
+                pages[role] = page
+                page.goto(BASE)
+                page.get_by_label("Usuário", exact=True).fill(username)
+                page.get_by_label("Senha", exact=True).fill(secret)
+                page.get_by_role("button", name="Entrar", exact=True).click()
+                expect(page.get_by_role("button", name="Sair", exact=True)).to_be_visible()
+            pedido, corte, coleta, admin = [
+                pages[r] for r in ("pedido", "corte", "coleta", "admin")
+            ]
+            admin.get_by_role("button", name="Painel de produção", exact=True).click()
+            # Filtro escolhido deve sobreviver a atualizações recebidas de outro setor.
+            corte.get_by_role("radio", name="Pendente", exact=True).check()
+            pedido.get_by_text("Nova ordem", exact=True).click()
+            pedido.get_by_label("Produto", exact=True).fill("TESTE piloto entre setores")
+            pedido.get_by_label("Produto", exact=True).press("Tab")
+            pedido.get_by_label("Especificação (medida, cor ou tecido)", exact=True).fill(
+                "Azul 50x70"
+            )
+            pedido.get_by_label("Especificação (medida, cor ou tecido)", exact=True).press("Tab")
+            pedido.get_by_role("button", name="Enviar para produção", exact=True).click()
+            card = corte.get_by_role("button", name="TESTE piloto entre setores", exact=False)
+            expect(card).to_be_visible(timeout=20000)
+            expect(corte.get_by_role("radio", name="Pendente", exact=True)).to_be_checked()
+            expect(
+                admin.get_by_role("button", name="TESTE piloto entre setores", exact=False)
+            ).to_be_visible(timeout=20000)
+            # Texto ainda em edição não deve ser perdido pelo polling da fila.
+            if not pedido.get_by_label("Produto", exact=True).is_visible():
+                pedido.get_by_text("Nova ordem", exact=True).click()
+            draft = pedido.get_by_label("Produto", exact=True)
+            draft.fill("Rascunho mantido durante produção")
+            before = pedido.get_by_text("Última consulta:", exact=False).inner_text()
+            card.click()
+            dialog = corte.get_by_role("dialog")
+            expect(dialog.get_by_text("Azul 50x70", exact=True)).to_be_visible()
+            # Aguarda um ciclo observável sem mudar foco, tela ou formulário.
+            expect(pedido.get_by_text("Última consulta:", exact=False)).not_to_have_text(
+                before, timeout=20000
+            )
+            expect(draft).to_have_value("Rascunho mantido durante produção")
+            expect(dialog).to_be_visible()
+            for action in ("Iniciar corte", "Iniciar costura", "Marcar lote pronto"):
+                dialog.get_by_role("button", name=action, exact=True).click()
+            expect(
+                dialog.get_by_text(
+                    "Produto disponível para coleta e embalagem — lote completo.", exact=True
+                )
+            ).to_be_visible()
+            expect(pedido.get_by_text("Avisos não lidos: 1", exact=True)).to_be_visible(
+                timeout=20000
+            )
+            expect(
+                coleta.get_by_role("button", name="TESTE piloto entre setores", exact=False)
+            ).to_be_visible(timeout=20000)
+            expect(coleta.get_by_text("Avisos não lidos: 0", exact=True)).to_be_visible()
+            coleta.get_by_role("button", name="TESTE piloto entre setores", exact=False).click()
+            retirada = coleta.get_by_role("dialog")
+            retirada.get_by_label("Confirmo a retirada de todo o lote", exact=True).check()
+            retirada.get_by_role("button", name="Confirmar coleta", exact=True).click()
+            expect(retirada.get_by_text("Coletada por piloto_coleta", exact=False)).to_be_visible()
+            expect(
+                pedido.get_by_text(
+                    "Lote já coletado. Este aviso permanece no histórico.", exact=True
+                )
+            ).to_be_visible(timeout=20000)
+            expect(draft).to_have_value("Rascunho mantido durante produção")
+            # Evidência fica no artefato browser-evidence da execução.
+            pedido.screenshot(
+                path=str(OUTPUT / "pilot-requester.png"), full_page=True, animations="disabled"
+            )
+            coleta.screenshot(
+                path=str(OUTPUT / "pilot-collected.png"), full_page=True, animations="disabled"
+            )
+        except Exception:
+            for role, page in pages.items():
+                page.screenshot(
+                    path=str(OUTPUT / f"pilot-failure-{role}.png"),
+                    full_page=True,
+                    animations="disabled",
+                )
+            raise
+        finally:
+            browser.close()

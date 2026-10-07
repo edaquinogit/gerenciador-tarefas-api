@@ -79,7 +79,7 @@ python -m alembic current
 python -m alembic check
 ```
 
-O resultado esperado é `0005 (head)` e nenhuma mudança de schema pendente. Reinicie API e interface com os comandos do README. Entre com o **mesmo usuário e senha**. Complete seu contato em Minha conta; novos funcionários pedem telefone com DDD. No topo da tela administrativa, clique em **Todas as tarefas**.
+A revisão desta etapa histórica é `0005`; na versão atual, o resultado esperado é `0008 (head)` e nenhuma mudança de schema pendente. Reinicie API e interface com os comandos do README. Entre com o **mesmo usuário e senha**. Complete seu contato em Minha conta; novos funcionários pedem telefone com DDD. No topo da tela administrativa, clique em **Painel de produção**.
 
 A migração acrescenta telefone nulo às contas existentes e torna e-mail opcional, sem apagar e-mails anteriores. Preserva IDs, senhas, perfis, setores, versões de sessão, tarefas, ordens, eventos e avisos. No SQLite, a alteração exige reconstruir a tabela de usuários: as chaves estrangeiras são desativadas somente na conexão de migração, e as referências são verificadas antes do commit. Se houver referências inválidas, a transação é revertida e a migração falha. Nas conexões da aplicação as verificações permanecem ativas.
 

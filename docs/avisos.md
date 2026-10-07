@@ -13,7 +13,7 @@ A central **Avisos de produtos prontos** aparece nas páginas de usuários habil
 
 O aviso não depende de a pessoa estar conectada no momento da conclusão. Ele fica salvo no banco e aparece no próximo login. Não há envio de WhatsApp, e-mail, som ou push com navegador fechado nesta versão. A consulta periódica pode ser atrasada pelo navegador/rede se a aba estiver em segundo plano.
 
-Apenas a central é atualizada automaticamente. Os formulários não são recarregados pelo temporizador. A fila de ordens ainda usa **Atualizar fila**; ao receber um aviso, use **Abrir ordem** para consultar o lote.
+A central e a fila são atualizadas automaticamente a cada 10 segundos, sem reexecutar os formulários ou o diálogo aberto. **Atualizar fila** antecipa a consulta; ao receber um aviso, use **Abrir ordem** para consultar o lote.
 
 ## Leitura e retirada são ações diferentes
 

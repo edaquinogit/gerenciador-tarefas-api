@@ -276,7 +276,22 @@ def render_ordens(service, token, user, report_error):
                             st.rerun()
                         except APIError as error:
                             report_error(error)
-    st.caption("Fila compartilhada entre os setores. Use Atualizar fila para consultar mudanças.")
+    render_fila(service, token, user, report_error)
+
+
+@st.fragment(run_every="10s")
+def render_fila(service, token, user, report_error):
+    # O temporizador não reexecuta o formulário de criação nem o diálogo aberto.
+    token = st.session_state.get("access_token", token)
+    try:
+        _render_fila(service, token, user, report_error)
+    finally:
+        persist_state(service)
+
+
+def _render_fila(service, token, user, report_error):
+    setor = user["setor"]
+    st.caption("Fila compartilhada · atualização automática a cada 10 segundos com a tela ativa.")
     st.button("Atualizar fila")
     status, situacao, categoria_filtro = render_filtros(
         "ordens",
@@ -293,6 +308,7 @@ def render_ordens(service, token, user, report_error):
             lambda **kwargs: service.pagina_ordens(token, **kwargs), "ordens_pagina", **params
         )
         ordens = resultado["itens"]
+        st.caption(f"Última consulta: {datetime.now(FUSO):%H:%M:%S} (Bahia).")
     except APIError as error:
         report_error(error)
         return

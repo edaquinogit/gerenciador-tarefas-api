@@ -12,7 +12,7 @@
 
 Somente o solicitante daquela ordem e os administradores ativos recebem um aviso. Listagem, contagens e leitura verificam o destinatário e a titularidade atual no servidor. Avisos antigos encaminhados ao setor de coleta continuam armazenados, mas não são exibidos nem podem ser marcados como lidos por destinatários que não sejam o solicitante ou ADM.
 
-A caixa mostra um destaque quando há avisos não lidos e inicia expandida. Atualiza a cada 10 segundos com a página ativa. A fila operacional permanece compartilhada entre setores; coleta consulta as ordens prontas nessa fila. Ler um aviso não confirma retirada. Avisos de ordens já coletadas/canceladas mostram a situação atual.
+A caixa mostra um destaque quando há avisos não lidos e inicia expandida. Atualiza a cada 10 segundos com a página ativa. A fila operacional é atualizada a cada 10 segundos sem reexecutar o formulário de criação nem o diálogo aberto e permanece compartilhada entre setores; coleta consulta as ordens prontas nessa fila. Ler um aviso não confirma retirada. Avisos de ordens já coletadas/canceladas mostram a situação atual.
 
 A migração 0008 recupera avisos ausentes para solicitantes e administradores ativos a partir de eventos de conclusão existentes. Preserva avisos já lidos e não duplica evento/destinatário. Não inventa eventos ausentes: registros sem evento de conclusão exigem conferência separada.
 

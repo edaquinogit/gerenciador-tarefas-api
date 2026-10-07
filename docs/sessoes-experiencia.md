@@ -25,7 +25,7 @@ python -m alembic upgrade head
 python -m alembic check
 ```
 
-Só prossiga para a migração se o backup terminar com sucesso. A revisão esperada é **0007**; ela cria a tabela `sessao` e preserva as tabelas operacionais. Tokens da versão anterior precisam de novo login. Não há downgrade destrutivo: em rollback, pare os serviços e restaure um backup validado junto da versão correspondente do código.
+Só prossiga para a migração se o backup terminar com sucesso. A revisão atual esperada é **0008**. A 0007 cria `sessao`; a 0008 acrescenta autorização de senha e recupera avisos ausentes. Ambas preservam as tabelas operacionais. Tokens da versão anterior precisam de novo login. Não há downgrade destrutivo: em rollback, pare os serviços e restaure um backup validado junto da versão correspondente do código.
 
 Terminal 1:
 
