@@ -21,7 +21,7 @@ python -m alembic check
 
 Prossiga com migração somente se o backup concluir. O comando utiliza o SQLite definido em DATABASE_URL, inclusive caminho absoluto, e grava cópia consistente e exclusiva em `backups/*.bak`. Não sobrescreve backups nem cria banco de origem se estiver ausente. Os arquivos não são versionados. Guarde uma cópia também em local separado do computador para proteção contra perda do dispositivo.
 
-Resultado esperado: `0006 (head)`. Ordens antigas recebem **Outros**; não há reclassificação retroativa. A migração preserva usuários, tarefas, ordens, eventos e notificações. Downgrade destrutivo é recusado; para reverter, preserve os dados novos e restaure o backup com o código correspondente, reconciliando registros posteriores.
+A classificação foi introduzida em 0006; ao atualizar para a versão atual, o resultado esperado é `0008 (head)`. Ordens antigas recebem **Outros**; não há reclassificação retroativa. A migração preserva usuários, tarefas, ordens, eventos e notificações. Downgrade destrutivo é recusado; para reverter, preserve os dados novos e restaure o backup com o código correspondente, reconciliando registros posteriores.
 
 ## Rodar no VS Code (Windows / CMD)
 

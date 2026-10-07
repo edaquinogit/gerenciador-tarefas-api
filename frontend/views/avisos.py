@@ -8,6 +8,7 @@ from frontend.views.paginacao import carregar_pagina, render_paginacao, reset_pa
 
 @st.fragment(run_every="10s")
 def render_avisos(service, token, report_error):
+    token = st.session_state.get("access_token", token)
     try:
         resumo = service.notificacoes(token, limit=1)
     except APIError as error:

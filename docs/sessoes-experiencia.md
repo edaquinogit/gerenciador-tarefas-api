@@ -25,7 +25,7 @@ python -m alembic upgrade head
 python -m alembic check
 ```
 
-Só prossiga para a migração se o backup terminar com sucesso. A revisão esperada é **0007**; ela cria a tabela `sessao` e preserva as tabelas operacionais. Tokens da versão anterior precisam de novo login. Não há downgrade destrutivo: em rollback, pare os serviços e restaure um backup validado junto da versão correspondente do código.
+Só prossiga para a migração se o backup terminar com sucesso. A revisão atual esperada é **0008**. A 0007 cria `sessao`; a 0008 acrescenta autorização de senha e recupera avisos ausentes. Ambas preservam as tabelas operacionais. Tokens da versão anterior precisam de novo login. Não há downgrade destrutivo: em rollback, pare os serviços e restaure um backup validado junto da versão correspondente do código.
 
 Terminal 1:
 
@@ -68,3 +68,5 @@ Substitua pelo IP do servidor; abra os serviços na interface da rede e libere s
 7. Simular API indisponível: mostrar erro e preservar dados ainda em memória, sem afirmar que a operação foi concluída.
 
 AppTest cobre a interface Python, mas não executa JavaScript. A CI também executa `tests_browser` com Chrome para validar o cookie, F5, rascunho, logout e largura reduzida, guardando capturas e logs em `browser-evidence`. Testes automatizados não substituem o ensaio nos aparelhos e na rede da empresa.
+
+A renovação periódica do token é isolada em um fragmento: ela não redesenha os campos ainda em edição. Os painéis, avisos e detalhes utilizam o token atualizado. Entrada, saída, recuperação ou mudança de usuário continuam reconstruindo a tela quando necessário.

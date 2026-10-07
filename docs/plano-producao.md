@@ -9,8 +9,8 @@ Conectar solicitação (em cima), produção (embaixo) e coleta/embalagem. Cada 
 1. **Base — esta branch:** modelos únicos, autenticação centralizada, configuração, serviços, migrações, cliente HTTP, testes e CI. Mantém tarefas pessoais.
 2. **Acessos — implementado nesta branch:** administrador/funcionário, três setores fixos, gerenciamento de funcionários, redefinição e troca de senhas, permissões na API e bootstrap do primeiro administrador. Cada funcionário tem um setor. As ações de produção por setor estão aplicadas na fase 3.
 3. **Ordens — implementado nesta branch:** produto/especificação, quantidade/unidade, prazo, prioridade, solicitante, responsável, histórico e etapas `PENDENTE → CORTANDO → COSTURANDO → PRONTO`.
-4. **Avisos — implementado nesta branch:** central persistente por destinatário, gerada na mesma transação da conclusão e consultada a cada 10 segundos com sessão ativa. Leitura individual e idempotente não confirma coleta. O aviso mostra situação atual de retirada/cancelamento. A fila de ordens permanece com atualização manual. Sem avisos externos ou geração retroativa.
-5. **Ensaio controlado — preparado:** banco SQLite isolado, quatro contas, inicialização local/LAN e roteiro de aceite. Atualização atual acrescenta telefone com DDD e acesso do administrador ao painel Todas as tarefas, consultado a cada 10 segundos. Falta registrar o teste presencial com os setores.
+4. **Avisos — implementado nesta branch:** central persistente por destinatário, gerada na mesma transação da conclusão e consultada a cada 10 segundos com sessão ativa. Leitura individual e idempotente não confirma coleta. O aviso mostra situação atual de retirada/cancelamento. A fila de ordens também consulta novidades a cada 10 segundos. Sem avisos externos. A migração 0008 recupera avisos ausentes de conclusões registradas.
+5. **Ensaio controlado — preparado:** banco SQLite isolado, quatro contas, inicialização local/LAN e roteiro de aceite. Atualização atual acrescenta telefone com DDD e acesso do administrador ao Painel de produção, consultado a cada 10 segundos. Falta registrar o teste presencial com os setores.
 6. **Preparação operacional — pendente:** hospedagem protegida, backup/restauração testados, validação de rede e capacidade. Avaliar PostgreSQL e driver conforme a concorrência observada; PostgreSQL não foi implantado ou validado.
 7. **Indicadores — pendente:** tempo por etapa, fila, atrasos, impedimentos e tempo aguardando coleta.
 
@@ -55,3 +55,8 @@ Sessões revogáveis com recuperação após F5, renovação limitada, restaura�
 ## Operação por ordens — versão 2.7
 
 Interface sem tarefas pessoais, avisos privados recuperados na migração 0008, autorização individual de senha pelo ADM, cards por prioridade/prazo e filtros compactos. Critérios de aceite em [regras operacionais](regras-operacionais.md).
+
+
+## Atualização automática e ensaio
+
+Fila operacional consulta a API a cada 10 segundos em fragmento separado, preservando formulário, filtros e diálogo. Ensaio automatizado com quatro sessões no Chrome cobre criação, produção, aviso e coleta. O roteiro em `piloto.md` reflete avisos privados e cards. O aceite presencial e a validação da recuperação do banco real continuam dependentes do ambiente da empresa.

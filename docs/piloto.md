@@ -31,7 +31,7 @@ A pasta `.pilot` contém banco SQLite, configuração e `acessos.json` com quatr
 | `piloto_admin` | Administrador, acompanha tudo e gerencia funcionários |
 | `piloto_solicitacao` | Abre a ordem e recebe o aviso de pronto |
 | `piloto_producao` | Avança corte, costura e pronto |
-| `piloto_coleta` | Recebe o aviso e confirma a coleta do lote |
+| `piloto_coleta` | Consulta a fila de prontos e confirma a coleta do lote |
 
 Use computadores, perfis de navegador ou sessões independentes. Quatro abas compartilhando uma sessão não são uma boa simulação de quatro funcionários. Para testar com mais pessoas, o administrador deve cadastrar uma conta por pessoa.
 
@@ -51,23 +51,27 @@ No modo `--rede`, a API também escuta a rede na porta 8001, pois o navegador pr
 
 ## Roteiro de aceite
 
-Anote o ID da ordem e os horários. Na fila, use **Atualizar** após cada mudança de outro setor. Os avisos consultam novidades a cada 10 segundos enquanto a sessão está ativa; se a aba ficar suspensa pelo navegador, retome-a e atualize. Ler um aviso não confirma a coleta.
+Anote o ID da ordem e os horários. A fila é atualizada automaticamente a cada 10 segundos com a tela ativa. **Atualizar fila** permite antecipar a consulta sem F5. Os avisos consultam novidades a cada 10 segundos enquanto a sessão está ativa; se a aba ficar suspensa pelo navegador, retome-a e atualize. Ler um aviso não confirma a coleta.
 
 | Passo | Responsável / ação | Resultado esperado |
 |---|---|---|
 | 1 | Cada participante entra com sua conta | Papel e setor corretos; funcionário sem gestão de contas |
 | 2 | Solicitação cria “TESTE – lote 01”, 10 peças, especificação fictícia e prazo futuro | Uma ordem PENDENTE com ID e solicitante |
-| 3 | Produção atualiza a fila | Mesma ordem, quantidade e especificação |
+| 3 | Produção aguarda a atualização automática da fila | Mesma ordem, quantidade e especificação |
 | 4 | Produção marca CORTANDO e depois COSTURANDO | Histórico registra autor, etapa e horário; ainda sem aviso de pronto |
-| 5 | Produção marca PRONTO | Admin, solicitante e coleta recebem um aviso cada, disponível para coleta |
-| 6 | Solicitação marca seu aviso como lido | Aviso da coleta continua não lido; ordem continua aguardando coleta |
+| 5 | Produção marca PRONTO | Somente ADM e solicitante recebem um aviso cada; coleta vê o lote na fila de ordens prontas |
+| 6 | Solicitação marca seu aviso como lido | Aviso do ADM continua não lido; ordem continua aguardando coleta |
 | 7 | Coleta confirma o lote completo | Ordem registra coletor e horário; aviso passa a indicar coletada |
-| 8 | Admin clica em Todas as tarefas no topo, acompanha uma mudança e abre o histórico em Ordens de produção | Painel atualiza em até o próximo ciclo de consulta com a aba ativa; histórico mantém a sequência completa |
+| 8 | ADM clica em Painel de produção no topo, acompanha uma mudança e abre o histórico pelo título do card | Painel atualiza em até o próximo ciclo de consulta com a aba ativa; histórico mantém a sequência completa |
 | 9 | Todos saem; anfitrião encerra e inicia novamente | Novo login mantém ordem, histórico, avisos e leituras |
 
 A embalagem física faz parte da rotina do setor, mas **não há status “EMBALADO”**: a confirmação registra coleta. Também não há entrega parcial, reabertura ou edição de ordem.
 
-Faça ainda dois ensaios curtos:
+Faça ainda estes ensaios curtos:
+
+- **Continuidade:** deixe um rascunho aberto e aguarde mudanças feitas por outro setor. A fila deve atualizar sem apagar o texto nem alterar os filtros. Abra detalhes de outra ordem e aguarde um ciclo: o diálogo deve permanecer aberto. Os detalhes são consultados ao abrir/interagir; para conferir alterações externas, feche e reabra o card.
+- **Senha:** solicite liberação em Minha conta, aprove no ADM e troque uma vez. Uma segunda troca deve exigir nova liberação.
+- **Privacidade:** um segundo solicitante não recebe nem lê avisos da primeira pessoa; coleta consulta o lote pela fila compartilhada.
 
 - **Disputa:** duas sessões da produção abrem a mesma versão de uma segunda ordem; ambas tentam avançar. A segunda deve receber conflito/solicitação de atualização; o histórico registra uma única mudança. Atualize antes de continuar.
 - **Cancelamento e acesso:** o admin cancela uma terceira ordem pronta com justificativa; após atualização, a coleta não pode confirmá-la e o aviso indica cancelada. O admin desativa um funcionário de teste; o próximo acesso autenticado desse funcionário deve ser recusado. Reative ao terminar.
@@ -96,7 +100,13 @@ Ctrl+C encerra os dois processos e preserva os dados. Para retomar, execute some
 - **Migração pendente ou banco incompatível:** o início verifica o schema e recusa continuar. Preserve a pasta e peça revisão; não aplique migrações no banco real para resolver o ensaio.
 - **Senha esquecida:** admin pode redefinir a senha do funcionário; `acessos.json` contém apenas as senhas iniciais. Se esquecer a senha administrativa, prepare um novo ensaio preservando o anterior.
 - **Sessão expirada:** entre novamente após o prazo máximo de 12 horas. Tokens curtos são renovados enquanto a sessão continua válida. F5 deve manter o login, conforme [o guia de sessões](sessoes-experiencia.md).
-- **Aviso não aparece:** mantenha aba ativa, atualize, confira destinatário/setor e se a etapa realmente ficou PRONTO. Avisos vão ao solicitante, administradores ativos e funcionários ativos de coleta existentes naquele momento.
+- **Aviso não aparece:** mantenha aba ativa, atualize, confira destinatário/setor e se a etapa realmente ficou PRONTO. Avisos vão somente ao solicitante ativo e aos administradores ativos. Coleta acompanha a fila de ordens prontas.
 - **“Coletada” some da fila:** selecione a situação correspondente; ordens encerradas não aparecem no filtro de ativas.
 
 Antes de usar dados reais, ainda são necessárias validação presencial da rede e dos dispositivos, política de backup com restauração testada, hospedagem protegida, definição de responsáveis e avaliação de concorrência/capacidade. Nenhuma implantação na empresa foi realizada por este PR.
+
+## Ensaio automatizado e aceite presencial
+
+A CI executa `test_sector_pilot_automatic_queue_and_draft` com quatro sessões de navegador independentes: solicitação, produção, coleta e ADM. O fluxo cria uma ordem pela interface, verifica chegada automática, preserva filtro/rascunho/diálogo, avança as três etapas e confirma coleta. Capturas ficam no artefato `browser-evidence`.
+
+Isso valida o ambiente de teste da CI. O aceite nos computadores e na rede da empresa deve ser registrado no formulário acima; não há aceite presencial registrado no repositório. Migração atual: **0008**. Esta atualização da fila não cria nova migração.

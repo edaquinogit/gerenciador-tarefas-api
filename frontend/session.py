@@ -99,7 +99,35 @@ def recover_session():
     st.rerun()
 
 
+@st.fragment
 def sync_session(service):
+    # Renovar o JWT não deve reconstruir campos ainda em edição no navegador.
+    def navigation_state():
+        return tuple(
+            bool(st.session_state.get(key))
+            for key in (
+                "access_token",
+                "bridge_event",
+                "ui_loaded",
+                "browser_code",
+                "clear_cookie",
+                "awaiting_restore",
+            )
+        ) + (st.session_state.get("session_user"),)
+
+    before = navigation_state()
+    try:
+        _sync_session(service)
+    except APIError as error:
+        if error.status_code == 401 and st.session_state.get("access_token"):
+            recover_session()
+        st.error(str(error))
+        st.stop()
+    if before != navigation_state():
+        st.rerun()
+
+
+def _sync_session(service):
     result = browser_session(
         code=st.session_state.get("browser_code"),
         clear=st.session_state.get("clear_cookie"),
