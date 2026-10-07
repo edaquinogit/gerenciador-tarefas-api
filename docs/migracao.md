@@ -64,7 +64,7 @@ Valide o ciclo com contas de solicitação, produção e coleta em um banco de t
 
 ## Upgrade para avisos (0004)
 
-Pare a API, faça backup e execute `python -m alembic upgrade head` e `python -m alembic check`. A nova tabela `notificacao` preserva ordens e histórico existentes. Não há avisos retroativos para lotes que já estavam prontos antes da migração. Conclusões posteriores geram avisos persistentes na mesma transação; teste com usuários de solicitação e coleta. A coleta é independente da leitura de avisos. Consulte docs/avisos.md.
+Pare a API, faça backup e execute `python -m alembic upgrade head` e `python -m alembic check`. A nova tabela `notificacao` preserva ordens e histórico existentes. Na migração original não havia avisos retroativos; a revisão 0008 recupera avisos ausentes de conclusões registradas. Conclusões posteriores geram avisos persistentes na mesma transação; teste o recebimento com o solicitante e o ADM e acompanhe a coleta pela fila. A coleta é independente da leitura de avisos. Consulte docs/avisos.md.
 
 
 ## Upgrade para telefone (0005)
