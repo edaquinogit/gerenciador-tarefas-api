@@ -179,3 +179,23 @@ def test_ui_logout_outage_keeps_session_and_shows_retry(monkeypatch, client, adm
     assert not app.exception
     assert "access_token" in app.session_state
     assert any("encerrar a sessão" in error.value for error in app.error)
+
+
+def test_invalid_cookie_is_removed_without_clearing_unrelated_cookies(client):
+    client.cookies.set(sessoes.COOKIE, "cookie-invalido", path="/sessoes")
+    client.cookies.set("preferencia", "manter", path="/")
+    response = client.post("/sessoes/restaurar", headers=BROWSER)
+    assert response.status_code == 401
+    assert response.headers["cache-control"] == "no-store"
+    cookie = response.headers["set-cookie"].lower()
+    assert "max-age=0" in cookie and "path=/sessoes" in cookie
+    assert "httponly" in cookie and "samesite=strict" in cookie
+    assert "preferencia" not in cookie
+
+
+def test_rejected_origin_cannot_clear_cookie(client, user_factory):
+    browser_login(client, user_factory)
+    response = client.post("/sessoes/restaurar", headers={"Origin": "https://outro.example"})
+    assert response.status_code == 403
+    assert "set-cookie" not in response.headers
+    assert client.post("/sessoes/restaurar", headers=BROWSER).status_code == 200

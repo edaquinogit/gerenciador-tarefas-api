@@ -155,6 +155,7 @@ def _sync_session(service):
                 restore_state(result.get("state", {}))
                 st.session_state["ui_loaded"] = True
         elif status == "guest":
+            st.session_state.pop("session_error", None)
             if result.get("claim_failed"):
                 st.session_state["session_error"] = (
                     "Não foi possível manter este login após atualizar a página. Saia e entre novamente para recuperar a sessão persistente."

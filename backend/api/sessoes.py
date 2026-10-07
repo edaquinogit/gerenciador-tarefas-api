@@ -2,6 +2,7 @@ import json
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session, select, update
 
@@ -91,7 +92,24 @@ def restore(request: Request, session: Session = Depends(get_session)):
     record = session.exec(
         select(Sessao).where(Sessao.cookie_hash == sessoes.digest(cookie))
     ).first()
-    user = sessoes.validar(session, record)
+    try:
+        user = sessoes.validar(session, record)
+    except HTTPException as error:
+        if error.status_code != 401:
+            raise
+        response = JSONResponse(
+            status_code=401,
+            content={"detail": error.detail},
+            headers={"Cache-Control": "no-store"},
+        )
+        response.delete_cookie(
+            sessoes.COOKIE,
+            path="/sessoes",
+            httponly=True,
+            secure=request.app.state.settings.SESSION_COOKIE_SECURE,
+            samesite="strict",
+        )
+        return response
     return sessoes.apresentar(record, user, request.app.state.settings)
 
 
