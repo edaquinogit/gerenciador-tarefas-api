@@ -459,7 +459,7 @@ def test_sector_pilot_automatic_queue_and_draft(live_app):
             expect(coleta.get_by_text("Avisos não lidos: 0", exact=True)).to_be_visible()
             coleta.get_by_role("button", name="TESTE piloto entre setores", exact=False).click()
             retirada = coleta.get_by_role("dialog")
-            retirada.get_by_label("Confirmo a retirada de todo o lote", exact=True).check()
+            retirada.get_by_text("Confirmo a retirada de todo o lote", exact=True).click()
             retirada.get_by_role("button", name="Confirmar coleta", exact=True).click()
             expect(retirada.get_by_text("Coletada por piloto_coleta", exact=False)).to_be_visible()
             expect(
