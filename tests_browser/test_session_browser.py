@@ -513,7 +513,19 @@ def test_mobile_cookie_recovery_and_layout(live_app, engine_name):
             ]
         )
         # A primeira consulta falha; a próxima deve recuperar sozinha em 15 segundos.
-        context.route("**/sessoes/restaurar", lambda route: route.abort(), times=1)
+        context.route(
+            "**/sessoes/restaurar",
+            lambda route: route.fulfill(
+                status=503,
+                content_type="application/json",
+                headers={
+                    "Access-Control-Allow-Origin": BASE,
+                    "Access-Control-Allow-Credentials": "true",
+                },
+                body='{"detail":"API temporariamente indisponível"}',
+            ),
+            times=1,
+        )
         page = context.new_page()
         page.set_default_timeout(25000)
         errors = []
