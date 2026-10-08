@@ -485,3 +485,112 @@ def test_sector_pilot_automatic_queue_and_draft(live_app):
             raise
         finally:
             browser.close()
+
+
+@pytest.mark.parametrize("engine_name", ["chromium", "webkit"])
+def test_mobile_cookie_recovery_and_layout(live_app, engine_name):
+    """Cookie inválido, falha temporária, F5 e detalhes em telas pequenas."""
+    with sync_playwright() as playwright:
+        engine = getattr(playwright, engine_name)
+        options = (
+            {"executable_path": shutil.which("google-chrome")} if engine_name == "chromium" else {}
+        )
+        browser = engine.launch(**options)
+        context = browser.new_context(
+            viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
+        )
+        context.add_cookies(
+            [
+                {
+                    "name": "gerenciador_sessao",
+                    "value": "invalido",
+                    "domain": "127.0.0.1",
+                    "path": "/sessoes",
+                    "httpOnly": True,
+                    "sameSite": "Strict",
+                },
+                {"name": "preferencia_teste", "value": "preservar", "url": BASE},
+            ]
+        )
+        # A primeira consulta falha; a próxima deve recuperar sozinha em 15 segundos.
+        context.route(
+            "**/sessoes/restaurar",
+            lambda route: route.fulfill(
+                status=503,
+                content_type="application/json",
+                headers={
+                    "Access-Control-Allow-Origin": BASE,
+                    "Access-Control-Allow-Credentials": "true",
+                },
+                body='{"detail":"API temporariamente indisponível"}',
+            ),
+            times=1,
+        )
+        page = context.new_page()
+        page.set_default_timeout(25000)
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        try:
+            page.goto(BASE)
+            warning = page.get_by_text(
+                "Não foi possível recuperar a sessão no navegador.", exact=False
+            )
+            expect(warning).to_be_visible(timeout=25000)
+            expect(warning).to_have_count(0, timeout=30000)
+            expect(page.get_by_role("button", name="Entrar", exact=True)).to_be_visible()
+            cookies = {c["name"]: c["value"] for c in context.cookies()}
+            assert "gerenciador_sessao" not in cookies
+            assert cookies["preferencia_teste"] == "preservar"
+            page.get_by_label("Usuário", exact=True).fill("ensaio")
+            page.get_by_label("Senha", exact=True).fill(live_app)
+            page.get_by_role("button", name="Entrar", exact=True).click()
+            expect(
+                page.get_by_role("button", name="Painel de produção", exact=True)
+            ).to_be_visible()
+            # Aguarda a vinculação antes de recarregar a página.
+            for _ in range(100):
+                if any(c["name"] == "gerenciador_sessao" for c in context.cookies()):
+                    break
+                page.wait_for_timeout(100)
+            else:
+                pytest.fail("Cookie não foi vinculado")
+            page.reload()
+            page.get_by_role("button", name="Painel de produção", exact=True).click()
+            card = page.get_by_role("button", name="#1 — Toalha de ensaio", exact=True)
+            expect(card).to_be_visible()
+            for width in (360, 390, 768, 1440):
+                page.set_viewport_size({"width": width, "height": 900})
+                expect(card).to_be_visible()
+                assert page.locator("body").evaluate("e => e.scrollWidth <= window.innerWidth + 1")
+                card.click()
+                dialog = page.get_by_role("dialog")
+                expect(dialog.get_by_text("Branca 70x140", exact=True)).to_be_visible()
+                box = dialog.bounding_box()
+                assert box and box["x"] >= 0 and box["x"] + box["width"] <= width + 1
+                assert dialog.evaluate("e => e.scrollWidth <= e.clientWidth + 1")
+                if width == 390:
+                    page.screenshot(
+                        path=str(OUTPUT / f"audit-{engine_name}-mobile.png"), animations="disabled"
+                    )
+                dialog.get_by_role("button", name="Fechar detalhes", exact=True).click()
+                expect(dialog).to_have_count(0)
+            page.set_viewport_size({"width": 390, "height": 844})
+            toggle = page.get_by_test_id("stExpandSidebarButton")
+            page.wait_for_function("window.innerWidth < 640")
+            sidebar = page.get_by_test_id("stSidebar")
+            if sidebar.get_attribute("aria-expanded") == "false":
+                expect(toggle).to_be_visible(timeout=15000)
+                toggle.click()
+            page.get_by_role("button", name="Sair", exact=True).click()
+            expect(page.get_by_role("button", name="Entrar", exact=True)).to_be_visible()
+            page.reload()
+            expect(page.get_by_role("button", name="Entrar", exact=True)).to_be_visible()
+            assert not any(c["name"] == "gerenciador_sessao" for c in context.cookies())
+            assert not errors, errors
+        except Exception:
+            page.screenshot(
+                path=str(OUTPUT / f"audit-{engine_name}-failure.png"), animations="disabled"
+            )
+            raise
+        finally:
+            browser.close()
