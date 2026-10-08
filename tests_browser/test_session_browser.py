@@ -563,9 +563,9 @@ def test_mobile_cookie_recovery_and_layout(live_app, engine_name):
                 dialog.get_by_role("button", name="Fechar detalhes", exact=True).click()
                 expect(dialog).to_have_count(0)
             page.set_viewport_size({"width": 390, "height": 844})
-            toggle = page.locator('[data-testid="stSidebarCollapsedControl"] button')
-            if toggle.is_visible():
-                toggle.click()
+            toggle = page.get_by_test_id("stExpandSidebarButton")
+            expect(toggle).to_be_visible()
+            toggle.click()
             page.get_by_role("button", name="Sair", exact=True).click()
             expect(page.get_by_role("button", name="Entrar", exact=True)).to_be_visible()
             page.reload()
