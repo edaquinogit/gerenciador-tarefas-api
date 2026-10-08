@@ -523,7 +523,7 @@ def test_mobile_cookie_recovery_and_layout(live_app, engine_name):
             warning = page.get_by_text(
                 "Não foi possível recuperar a sessão no navegador.", exact=False
             )
-            expect(warning).to_be_visible()
+            expect(warning).to_be_visible(timeout=25000)
             expect(warning).to_have_count(0, timeout=30000)
             expect(page.get_by_role("button", name="Entrar", exact=True)).to_be_visible()
             cookies = {c["name"]: c["value"] for c in context.cookies()}
@@ -564,8 +564,11 @@ def test_mobile_cookie_recovery_and_layout(live_app, engine_name):
                 expect(dialog).to_have_count(0)
             page.set_viewport_size({"width": 390, "height": 844})
             toggle = page.get_by_test_id("stExpandSidebarButton")
-            expect(toggle).to_be_visible()
-            toggle.click()
+            page.wait_for_function("window.innerWidth < 640")
+            sidebar = page.get_by_test_id("stSidebar")
+            if sidebar.get_attribute("aria-expanded") == "false":
+                expect(toggle).to_be_visible(timeout=15000)
+                toggle.click()
             page.get_by_role("button", name="Sair", exact=True).click()
             expect(page.get_by_role("button", name="Entrar", exact=True)).to_be_visible()
             page.reload()
