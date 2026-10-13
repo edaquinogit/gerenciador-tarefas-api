@@ -529,6 +529,17 @@ def test_mobile_cookie_recovery_and_layout(live_app, engine_name):
         page = context.new_page()
         page.set_default_timeout(25000)
         errors = []
+        network = []
+        page.on(
+            "response",
+            lambda response: network.append(response.status)
+            if "/sessoes/" in response.url
+            else None,
+        )
+        page.on(
+            "requestfailed",
+            lambda request: network.append(request.failure) if "/sessoes/" in request.url else None,
+        )
         page.on("pageerror", lambda error: errors.append(str(error)))
         try:
             page.goto(BASE)
@@ -588,6 +599,8 @@ def test_mobile_cookie_recovery_and_layout(live_app, engine_name):
             assert not any(c["name"] == "gerenciador_sessao" for c in context.cookies())
             assert not errors, errors
         except Exception:
+            print("SESSION NETWORK", engine_name, network)
+            print("BROWSER ERRORS", errors)
             page.screenshot(
                 path=str(OUTPUT / f"audit-{engine_name}-failure.png"), animations="disabled"
             )
