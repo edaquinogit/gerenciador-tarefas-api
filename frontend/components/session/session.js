@@ -7,6 +7,8 @@
     window.parent.postMessage({isStreamlitMessage: true, type, ...payload}, parentOrigin);
   }
   function emit(value) {
+    document.getElementById("connection").textContent = value.status === "error"
+      ? "Reconectando…" : "Conexão ativa";
     send("streamlit:setComponentValue", {value: {...value, event: `${Date.now()}-${++eventId}`}, dataType: "json"});
   }
   async function request(path, body) {
@@ -22,9 +24,8 @@
     return response.json();
   }
   async function sync() {
-    if (running || !args) return;
+    if (running || !args || retryTimer) return;
     running = true;
-    clearTimeout(retryTimer);
     try {
       if (args.clear && args.clear !== lastClear) {
         await request("limpar-cookie");
@@ -55,7 +56,8 @@
         emit({status: "guest", claim_failed: Boolean(args.code)});
       } else {
         emit({status: "error", forbidden: error.status === 403});
-        retryTimer = setTimeout(() => { initialized = false; sync(); }, 15000);
+        initialized = false;
+        retryTimer = setTimeout(() => { retryTimer = null; sync(); }, 15000);
       }
     } finally { running = false; }
   }
@@ -66,12 +68,17 @@
   }
   window.addEventListener("message", event => {
     if (event.source !== window.parent || event.origin !== parentOrigin || event.data.type !== "streamlit:render") return;
-    args = event.data.args;
+    const nextArgs = event.data.args;
+    if (!args || nextArgs.code !== args.code || nextArgs.clear !== args.clear || nextArgs.force !== args.force) {
+      clearTimeout(retryTimer); retryTimer = null;
+    }
+    args = nextArgs;
     if (args.force && args.force !== lastForce) { lastForce = args.force; initialized = false; }
-    send("streamlit:setFrameHeight", {height: 0});
+    // Mantém o componente renderizado: WebKit pode suspender timers em iframe sem área.
+    send("streamlit:setFrameHeight", {height: 24});
     sync();
   });
-  window.addEventListener("online", () => { initialized = false; sync(); });
+  window.addEventListener("online", () => { clearTimeout(retryTimer); retryTimer = null; initialized = false; sync(); });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") { initialized = false; sync(); }
   });

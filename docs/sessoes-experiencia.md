@@ -70,3 +70,13 @@ Substitua pelo IP do servidor; abra os serviços na interface da rede e libere s
 AppTest cobre a interface Python, mas não executa JavaScript. A CI também executa `tests_browser` com Chrome para validar o cookie, F5, rascunho, logout e largura reduzida, guardando capturas e logs em `browser-evidence`. Testes automatizados não substituem o ensaio nos aparelhos e na rede da empresa.
 
 A renovação periódica do token é isolada em um fragmento: ela não redesenha os campos ainda em edição. Os painéis, avisos e detalhes utilizam o token atualizado. Entrada, saída, recuperação ou mudança de usuário continuam reconstruindo a tela quando necessário.
+
+## Navegadores, cookies e diagnóstico
+
+Não é necessário limpar todos os cookies para usar o sistema. A restauração remove automaticamente o cookie de sessão inválido, expirado ou revogado; sair também remove o cookie e revoga o acesso. Outros cookies permanecem intactos. Após uma falha temporária de conexão do navegador com a API, a sessão tenta recuperar a conexão; a mensagem desaparece quando a consulta volta a funcionar.
+
+Use sempre o mesmo endereço de acesso. `localhost`, `127.0.0.1` e o IP da rede são endereços diferentes para os cookies. No celular, `localhost` aponta para o próprio celular: use o IP do computador anfitrião e configure `--host-publico` conforme o piloto. Bloqueio de cookies ou origem incorreta não se resolve apagando o histórico.
+
+A auditoria automatizada cobre Chrome e WebKit em viewport móvel, recuperação de conexão, cookie inválido, login/F5/logout e abertura de detalhes nas larguras 360, 390, 768 e 1440 pixels. WebKit é o motor do Safari, mas a simulação não substitui um iPhone físico. Verifique no aparelho: teclado aberto, rotação, retorno após bloquear a tela e uso na rede da empresa. Não foi realizado teste de carga para 18 funcionários simultâneos.
+
+Se uma instalação antiga apresentar um problema persistente, registre o endereço, navegador, horário e mensagem antes de remover somente os dados daquele site. Isso encerra o login e pode descartar edição ainda não salva. Não limpe cookies de outros sites e não apague o banco.
