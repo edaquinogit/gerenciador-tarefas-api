@@ -586,6 +586,8 @@ def test_mobile_cookie_recovery_and_layout(live_app, engine_name):
                 dialog.get_by_role("button", name="Fechar detalhes", exact=True).click()
                 expect(dialog).to_have_count(0)
             page.set_viewport_size({"width": 390, "height": 844})
+            # O WebKit finaliza a animação responsiva depois do evento resize.
+            page.wait_for_timeout(1000)
             toggle = page.get_by_test_id("stExpandSidebarButton")
             page.wait_for_function("window.innerWidth < 640")
             sidebar = page.get_by_test_id("stSidebar")
